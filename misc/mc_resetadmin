@@ -31,7 +31,7 @@ NEWPASS=$(genpasswd)
 while true; do
 read -p "Please enter a username from above: " mailcow_admin_user
         if [[ ! -z $(mysql --host ${DBHOST} -u ${DBUSER} -p${DBPASS} ${DBNAME} -e "SELECT username FROM admin WHERE username='$mailcow_admin_user' AND superadmin='1';") ]]; then
-                mailcow_admin_pass_hashed=$(doveadm pw -s SHA512-CRYPT -p ${NEWPASS})
+                mailcow_admin_pass_hashed=$(doveadm pw -s SSHA256 -p ${NEWPASS})
                 mysql --host ${DBHOST} -u ${DBUSER} -p${DBPASS} ${DBNAME} -e "DELETE FROM admin WHERE username='$mailcow_admin_user';"
                 mysql --host ${DBHOST} -u ${DBUSER} -p${DBPASS} ${DBNAME} -e "INSERT INTO admin VALUES ('$mailcow_admin_user','$mailcow_admin_pass_hashed',1,now(),now(),1);"
                 echo

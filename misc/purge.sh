@@ -66,7 +66,7 @@ rm /etc/systemd/system/fail2ban.service
 rm /etc/systemd/system/fuglu.service
 # dovecot purge fails at first
 if [[ $FULLWIPE == "yes" ]]; then
-apt-get -y purge zip jq dnsutils python-sqlalchemy python-beautifulsoup python-setuptools \
+apt-get -y purge zip dnsutils python-sqlalchemy python-beautifulsoup python-setuptools \
 python-magic libmail-spf-perl libmail-dkim-perl php-auth-sasl php-http-request php-mail php-mail-mime php-mail-mimedecode php-net-dime php-net-smtp \
 php-net-socket php-net-url php-pear php-soap php5 php5-cli php5-common php5-curl php5-fpm php5-gd php5-imap php-apc subversion \
 php5-intl php5-mcrypt php5-mysql php5-sqlite libawl-php php5-xmlrpc mysql-client mariadb-server mariadb-client mysql-server mailutils nginx-common nginx-extras apache2 \
@@ -99,13 +99,11 @@ rm -rf /etc/ssl/mail/
 rm -rf /etc/spamassassin/
 rm -rf /etc/dovecot/
 rm -rf /etc/postfix/
-rm -rf /var/{lib,log}/z-push/
 rm -rf /etc/fail2ban/
 rm -f /etc/fufix_version
 rm -f /etc/mailcow_version
 rm -f /etc/{cron.daily,cron.weekly,cron.hourly,cron.monthly}/mailcow_backup
 rm -rf /etc/mail/postfixadmin
-rm -rf /var/www/{mail,zpush,dav}
 rm -f /usr/local/sbin/mc_*
 rm -f /etc/cron.daily/mc_clean_spam_aliases
 rm -rf /var/run/fetchmail

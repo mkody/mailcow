@@ -102,18 +102,7 @@ checkports() {
 }
 
 checkconfig() {
-	if [[ ${httpd_platform} != "nginx" && ${httpd_platform} != "apache2" ]]; then
-		echo "$(redb [ERR]) - \"httpd_platform\" is neither nginx nor apache2"
-		exit 1
-	elif [[ ${httpd_platform} = "apache2" && -z $(apt-cache show apache2 | grep Version | grep "2.4") ]]; then
-		echo "$(redb [ERR]) - Unable to install Apache 2.4, please use Nginx or upgrade your distribution"
-		exit 1
-	fi
-	if [[ ${httpd_dav_subdomain} == ${sys_hostname} ]]; then
-		echo "$(redb [ERR]) - \"httpd_dav_subdomain\" must not be \"sys_hostname\""
-		exit 1
-	fi
-	for var in sys_hostname sys_domain sys_timezone my_dbhost my_mailcowdb my_mailcowuser my_mailcowpass my_rootpw my_rcuser my_rcpass my_rcdb mailcow_admin_user mailcow_admin_pass
+	for var in sys_hostname sys_domain sys_timezone my_dbhost my_mailcowdb my_mailcowuser my_mailcowpass my_rootpw mailcow_admin_user mailcow_admin_pass
 	do
 		if [[ -z ${!var} ]]; then
 			echo "$(redb [ERR]) - Parameter $var must not be empty."
@@ -170,25 +159,19 @@ installtask() {
 			fi
 			/usr/sbin/make-ssl-cert generate-default-snakeoil --force-overwrite
 			# Detect and edit repos
-			if [[ $dist_codename == "wheezy" ]] && [[ -z $(grep -E "^deb(.*)wheezy-backports(.*)" /etc/apt/sources.list) ]]; then
-				echo "$(textb [INFO]) - Enabling wheezy-backports..."
-				echo -e "\ndeb http://http.debian.net/debian wheezy-backports main" >> /etc/apt/sources.list
+			if [[ $dist_codename == "trusty" ]]; then
+				echo "$(textb [INFO]) - Adding ondrej/apache2 repository..."
+				echo "deb http://ppa.launchpad.net/ondrej/apache2/ubuntu trusty main" > /etc/apt/sources.list.d/ondrej.list
+				apt-key adv --keyserver keyserver.ubuntu.com --recv E5267A6C > /dev/null 2>&1
+				echo "$(textb [INFO]) - Adding official SOGo repository..."
+				echo "deb http://inverse.ca/ubuntu trusty trusty" > /etc/apt/sources.list.d/sogo.list
+				apt-key adv --keyserver keys.gnupg.net --recv-key 0x810273C4 > /dev/null 2>&1
 				apt-get -y update >/dev/null
-			fi
-			if [[ ! -z $(grep -E "^deb(.*)wheezy-backports(.*)" /etc/apt/sources.list) ]]; then
-				echo "$(textb [INFO]) - Installing jq from wheezy-backports..."
-				apt-get -y update >/dev/null ; apt-get -y --force-yes install jq -t wheezy-backports >/dev/null
-			fi
-			if [[ ${httpd_platform} == "apache2" ]]; then
-				if [[ $dist_codename == "trusty" ]]; then
-					echo "$(textb [INFO]) - Adding ondrej/apache2 repository..."
-					echo "deb http://ppa.launchpad.net/ondrej/apache2/ubuntu trusty main" > /etc/apt/sources.list.d/ondrej.list
-					apt-key adv --keyserver keyserver.ubuntu.com --recv E5267A6C > /dev/null 2>&1
-					apt-get -y update >/dev/null
-				fi
-				webserver_backend="apache2 apache2-utils libapache2-mod-php5"
-			elif [[ ${httpd_platform} == "nginx" ]]; then
-				webserver_backend="nginx-extras php5-fpm"
+			elif [[ $dist_codename == "jessie" ]]; then
+				echo "$(textb [INFO]) - Adding official SOGo repository..."
+				echo "deb http://inverse.ca/ubuntu jessie jessie" > /etc/apt/sources.list.d/sogo.list
+				apt-key adv --keyserver keys.gnupg.net --recv-key 0x810273C4 > /dev/null 2>&1
+				apt-get -y update >/dev/null
 			fi
 			echo "$(textb [INFO]) - Installing packages unattended, please stand by, errors will be reported."
 			if [[ $(lsb_release -is) == "Ubuntu" ]]; then
@@ -204,14 +187,14 @@ installtask() {
 			else
 				database_backend=""
 			fi
-DEBIAN_FRONTEND=noninteractive apt-get --force-yes -y install zip jq dnsutils python-setuptools libmail-spf-perl libmail-dkim-perl file \
+DEBIAN_FRONTEND=noninteractive apt-get --force-yes -y install zip dnsutils python-setuptools libmail-spf-perl libmail-dkim-perl file \
 openssl php-auth-sasl php-http-request php-mail php-mail-mime php-mail-mimedecode php-net-dime php-net-smtp \
 php-net-socket php-net-url php-pear php-soap php5 php5-cli php5-common php5-curl php5-gd php5-imap php-apc subversion \
-php5-intl php5-xsl libawl-php php5-mcrypt php5-mysql php5-sqlite libawl-php php5-xmlrpc ${database_backend} ${webserver_backend} mailutils pyzor razor \
+php5-intl php5-xsl libawl-php php5-mcrypt php5-mysql php5-sqlite libawl-php php5-xmlrpc ${database_backend} mailutils pyzor razor \
 postfix postfix-mysql postfix-pcre postgrey pflogsumm spamassassin spamc sudo bzip2 curl mpack opendkim opendkim-tools unzip clamav-daemon \
 python-magic unrar-free liblockfile-simple-perl libdbi-perl libmime-base64-urlsafe-perl libtest-tempdir-perl liblogger-syslog-perl bsd-mailx \
 openjdk-7-jre-headless libcurl4-openssl-dev libexpat1-dev rrdtool mailgraph fcgiwrap spawn-fcgi \
-solr-jetty > /dev/null
+solr-jetty apache2 apache2-utils libapache2-mod-php5 sogo > /dev/null
 			if [ "$?" -ne "0" ]; then
 				echo "$(redb [ERR]) - Package installation failed"
 				exit 1
@@ -244,15 +227,14 @@ DEBIAN_FRONTEND=noninteractive apt-get --force-yes -y install dovecot-common dov
 			openssl dhparam -out /etc/ssl/mail/dhparams.pem 2048 2> /dev/null
 			if [[ ${httpd_lets_encrypt} == "yes" ]]; then
 				echo "$(textb [INFO]) - Requesting certificates from Let's Encrypt..."
-				service ${httpd_platform} stop 2> /dev/null
+				service apache2 stop 2> /dev/null
 				wget https://github.com/letsencrypt/letsencrypt/archive/v${letsencrypt}.tar.gz -O - | tar xfz -
-				./letsencrypt-${letsencrypt}/letsencrypt-auto certonly --standalone -d ${sys_hostname}.${sys_domain} -d ${httpd_dav_subdomain}.${sys_domain} -d autodiscover.${sys_domain}
+				./letsencrypt-${letsencrypt}/letsencrypt-auto certonly --standalone -d ${sys_hostname}.${sys_domain} -d autodiscover.${sys_domain}
 				if [[ $? == "0" ]]; then
 					for i in $(ls /etc/letsencrypt/live); do
 						if [[ ! -z $(openssl x509 -in "/etc/letsencrypt/live/$i/fullchain.pem" -text -noout | \
 							grep -E "DNS:autodiscover.${sys_domain}" | \
-							grep -E "DNS:${sys_hostname}.${sys_domain}" | \
-							grep -E "DNS:${httpd_dav_subdomain}.${sys_domain}") ]]; then
+							grep -E "DNS:${sys_hostname}.${sys_domain}" ]]; then
 									LE_CERT_PATH="/etc/letsencrypt/live/$i"
 									break
 						fi
@@ -271,7 +253,7 @@ DEBIAN_FRONTEND=noninteractive apt-get --force-yes -y install dovecot-common dov
 				rm -r letsencrypt-${letsencrypt}
 			fi
 			if [[ ${LETS_FAILED} == "1" ]] || [[ ${httpd_lets_encrypt} != "yes" ]]; then
-				openssl req -new -newkey rsa:4096 -sha256 -days 1095 -nodes -x509 -subj "/C=ZZ/ST=mailcow/L=mailcow/O=mailcow/CN=${sys_hostname}.${sys_domain}/subjectAltName=DNS.1=${sys_hostname}.${sys_domain},DNS.2=${httpd_dav_subdomain}.${sys_domain},DNS.3=autodiscover.{sys_domain}" -keyout /etc/ssl/mail/mail.key -out /etc/ssl/mail/mail.crt
+				openssl req -new -newkey rsa:4096 -sha256 -days 1095 -nodes -x509 -subj "/C=ZZ/ST=mailcow/L=mailcow/O=mailcow/CN=${sys_hostname}.${sys_domain}/subjectAltName=DNS.1=${sys_hostname}.${sys_domain},DNS.2=autodiscover.{sys_domain}" -keyout /etc/ssl/mail/mail.key -out /etc/ssl/mail/mail.crt
 				chmod 600 /etc/ssl/mail/mail.key
 				cp /etc/ssl/mail/mail.crt /usr/local/share/ca-certificates/
 				update-ca-certificates
@@ -281,9 +263,8 @@ DEBIAN_FRONTEND=noninteractive apt-get --force-yes -y install dovecot-common dov
 			if [[ $mysql_useable -ne 1 ]]; then
 				mysql --defaults-file=/etc/mysql/debian.cnf -e "UPDATE mysql.user SET Password=PASSWORD('$my_rootpw') WHERE USER='root'; FLUSH PRIVILEGES;"
 			fi
-			mysql --host ${my_dbhost} -u root -p${my_rootpw} -e "DROP DATABASE IF EXISTS $my_mailcowdb; DROP DATABASE IF EXISTS $my_rcdb;"
+			mysql --host ${my_dbhost} -u root -p${my_rootpw} -e "DROP DATABASE IF EXISTS $my_mailcowdb;"
 			mysql --host ${my_dbhost} -u root -p${my_rootpw} -e "CREATE DATABASE $my_mailcowdb; GRANT SELECT, UPDATE, DELETE, INSERT ON $my_mailcowdb.* TO '$my_mailcowuser'@'%' IDENTIFIED BY '$my_mailcowpass';"
-			mysql --host ${my_dbhost} -u root -p${my_rootpw} -e "CREATE DATABASE $my_rcdb; GRANT ALL PRIVILEGES ON $my_rcdb.* TO '$my_rcuser'@'%' IDENTIFIED BY '$my_rcpass';"
 			mysql --host ${my_dbhost} -u root -p${my_rootpw} -e "GRANT SELECT ON $my_mailcowdb.* TO 'vmail'@'%'; FLUSH PRIVILEGES;"
 			;;
 		postfix)
@@ -497,48 +478,26 @@ DatabaseMirror clamav.inode.at" >> /etc/clamav/freshclam.conf
 			;;
 		webserver)
 			mkdir -p /var/www/ 2> /dev/null
-			if [[ ${httpd_platform} == "nginx" ]]; then
-				# Some systems miss the default php5-fpm listener, reinstall it now
-				apt-get -o Dpkg::Options::="--force-confmiss" install -y --reinstall php5-fpm > /dev/null
-				rm /etc/nginx/sites-enabled/{000-0-mailcow*,000-0-fufix} 2>/dev/null
-				cp webserver/nginx/conf/sites-available/mailcow /etc/nginx/sites-available/
-				cp webserver/php5-fpm/conf/pool/mail.conf /etc/php5/fpm/pool.d/mail.conf
-				cp webserver/php5-fpm/conf/php-fpm.conf /etc/php5/fpm/php-fpm.conf
-				sed -i "/date.timezone/c\php_admin_value[date.timezone] = ${sys_timezone}" /etc/php5/fpm/pool.d/mail.conf
-				ln -s /etc/nginx/sites-available/mailcow /etc/nginx/sites-enabled/000-0-mailcow 2>/dev/null
-				[[ ! -z $(grep "server_names_hash_bucket_size" /etc/nginx/nginx.conf) ]] && \
-					sed -i "/server_names_hash_bucket_size/c\ \ \ \ \ \ \ \ server_names_hash_bucket_size 64;" /etc/nginx/nginx.conf || \
-					sed -i "/http {/a\ \ \ \ \ \ \ \ server_names_hash_bucket_size 64;" /etc/nginx/nginx.conf
-				sed -i "s/MAILCOW_HOST.MAILCOW_DOMAIN;/${sys_hostname}.${sys_domain};/g" /etc/nginx/sites-available/mailcow
-				sed -i "s/MAILCOW_DAV_HOST.MAILCOW_DOMAIN;/${httpd_dav_subdomain}.${sys_domain};/g" /etc/nginx/sites-available/mailcow
-				sed -i "s/MAILCOW_DOMAIN;/${sys_domain};/g" /etc/nginx/sites-available/mailcow
-			elif [[ ${httpd_platform} == "apache2" ]]; then
-				rm /etc/apache2/sites-enabled/{mailcow*,000-0-mailcow,000-0-fufix,000-0-mailcow.conf} 2>/dev/null
-				cp webserver/apache2/conf/sites-available/mailcow.conf /etc/apache2/sites-available/
-				ln -s /etc/apache2/sites-available/mailcow.conf /etc/apache2/sites-enabled/000-0-mailcow.conf 2>/dev/null
-				sed -i "s/\"\MAILCOW_HOST.MAILCOW_DOMAIN\"/\"${sys_hostname}.${sys_domain}\"/g" /etc/apache2/sites-available/mailcow.conf
-				sed -i "s/\"\MAILCOW_DAV_HOST.MAILCOW_DOMAIN\"/\"${httpd_dav_subdomain}.${sys_domain}\"/g" /etc/apache2/sites-available/mailcow.conf
-				sed -i "s/\"autoconfig.MAILCOW_DOMAIN\"/\"autoconfig.${sys_domain}\"/g" /etc/apache2/sites-available/mailcow.conf
-				sed -i "s/MAILCOW_DOMAIN\"/${sys_domain}\"/g" /etc/apache2/sites-available/mailcow.conf
-				 sed -i "/date.timezone/c\php_value date.timezone ${sys_timezone}" /etc/apache2/sites-available/mailcow.conf
-				a2enmod rewrite ssl headers cgi > /dev/null 2>&1
-			fi
+			rm /etc/apache2/sites-enabled/{mailcow*,000-0-mailcow,000-0-fufix,000-0-mailcow.conf} 2>/dev/null
+			cp webserver/apache2/conf/sites-available/mailcow.conf /etc/apache2/sites-available/
+			ln -s /etc/apache2/sites-available/mailcow.conf /etc/apache2/sites-enabled/000-0-mailcow.conf 2>/dev/null
+			sed -i "s/\"\MAILCOW_HOST.MAILCOW_DOMAIN\"/\"${sys_hostname}.${sys_domain}\"/g" /etc/apache2/sites-available/mailcow.conf
+			sed -i "s/\"autoconfig.MAILCOW_DOMAIN\"/\"autoconfig.${sys_domain}\"/g" /etc/apache2/sites-available/mailcow.conf
+			sed -i "s/MAILCOW_DOMAIN\"/${sys_domain}\"/g" /etc/apache2/sites-available/mailcow.conf
+			sed -i "/date.timezone/c\php_value date.timezone ${sys_timezone}" /etc/apache2/sites-available/mailcow.conf
+			a2enmod rewrite ssl headers cgi proxy proxy_http > /dev/null 2>&1
 			mkdir /var/lib/php5/sessions 2> /dev/null
-			cp -R webserver/htdocs/{mail,dav,zpush} /var/www/
-			tar xf /var/www/dav/vendor.tar -C /var/www/dav/ ; rm /var/www/dav/vendor.tar
-			tar xf /var/www/zpush/vendor.tar -C /var/www/zpush/ ; rm /var/www/zpush/vendor.tar
-			find /var/www/{dav,mail,zpush} -type d -exec chmod 755 {} \;
-			find /var/www/{dav,mail,zpush} -type f -exec chmod 644 {} \;
-			sed -i "/date_default_timezone_set/c\date_default_timezone_set('${sys_timezone}');" /var/www/dav/server.php
+			cp -R webserver/htdocs/mail /var/www/
+			find /var/www/mail -type d -exec chmod 755 {} \;
+			find /var/www/mail -type f -exec chmod 644 {} \;
 			touch /var/mailcow/mailbox_backup_env
 			echo none > /var/mailcow/log/pflogsumm.log
 			sed -i "s/mailcow_sub/${sys_hostname}/g" /var/www/mail/autoconfig.xml
-			sed -i "s/my_dbhost/$my_dbhost/g" /var/www/mail/inc/vars.inc.php /var/www/dav/server.php /var/www/zpush/config.php /var/www/zpush/backend/imap/config.php
-			sed -i "s/my_mailcowpass/$my_mailcowpass/g" /var/www/mail/inc/vars.inc.php /var/www/dav/server.php /var/www/zpush/config.php /var/www/zpush/backend/imap/config.php
-			sed -i "s/my_mailcowuser/$my_mailcowuser/g" /var/www/mail/inc/vars.inc.php /var/www/dav/server.php /var/www/zpush/config.php /var/www/zpush/backend/imap/config.php
-			sed -i "s/my_mailcowdb/$my_mailcowdb/g" /var/www/mail/inc/vars.inc.php /var/www/dav/server.php /var/www/zpush/config.php /var/www/zpush/backend/imap/config.php
-			sed -i "s/httpd_dav_subdomain/$httpd_dav_subdomain/g" /var/www/mail/inc/vars.inc.php
-			chown -R www-data: /var/www/{.,mail,dav} /var/lib/php5/sessions /var/mailcow/mailbox_backup_env
+			sed -i "s/my_dbhost/$my_dbhost/g" /var/www/mail/inc/vars.inc.php
+			sed -i "s/my_mailcowpass/$my_mailcowpass/g" /var/www/mail/inc/vars.inc.php
+			sed -i "s/my_mailcowuser/$my_mailcowuser/g" /var/www/mail/inc/vars.inc.php
+			sed -i "s/my_mailcowdb/$my_mailcowdb/g" /var/www/mail/inc/vars.inc.php
+			chown -R www-data: /var/www/{.,mail} /var/lib/php5/sessions /var/mailcow/mailbox_backup_env
 			mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} < webserver/htdocs/init.sql
 			if [[ -z $(mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -e "SHOW INDEX FROM propertystorage WHERE KEY_NAME = 'path_property';" -N -B) ]]; then
 				mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -e "CREATE UNIQUE INDEX path_property ON propertystorage (path(600), name(100));" -N -B
@@ -546,56 +505,24 @@ DatabaseMirror clamav.inode.at" >> /etc/clamav/freshclam.conf
 			if [[ -z $(mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -e "SHOW INDEX FROM zpush_states WHERE KEY_NAME = 'idx_zpush_states_unique';" -N -B) ]]; then
 				mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -e "CREATE unique index idx_zpush_states_unique on zpush_states (device_id, uuid, state_type, counter);" -N -B
 			fi
-			if [[ -z $(mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -e "SHOW INDEX FROM zpush_preauth_users WHERE KEY_NAME = 'index_zpush_preauth_users_on_username_and_device_id';" -N -B) ]]; then
-				mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -e "CREATE unique index index_zpush_preauth_users_on_username_and_device_id on zpush_preauth_users (username, device_id);" -N -B
-			fi
 			if [[ -z $(mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -e "SHOW COLUMNS FROM domain LIKE 'relay_all_recipients';" -N -B) ]]; then
 				mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -e "ALTER TABLE domain ADD relay_all_recipients tinyint(1) NOT NULL DEFAULT '0';" -N -B
 			fi
 			if [[ $(mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -s -N -e "SELECT * FROM admin;" | wc -l) -lt 1 ]]; then
-				mailcow_admin_pass_hashed=$(doveadm pw -s SHA512-CRYPT -p $mailcow_admin_pass)
+				mailcow_admin_pass_hashed=$(doveadm pw -s SSHA256 -p $mailcow_admin_pass)
 				mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -e "INSERT INTO admin VALUES ('$mailcow_admin_user','$mailcow_admin_pass_hashed',1,now(),now(),1);"
 				mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -e "INSERT INTO domain_admins (username, domain, created, active) VALUES ('$mailcow_admin_user', 'ALL', now(), '1');"
 			else
 				echo "$(textb [INFO]) - At least one administrator exists, will not create another mailcow administrator"
 			fi
-			# Z-Push
-			sed -i "s#MAILCOW_TIMEZONE#${sys_timezone}#g" /var/www/zpush/config.php
-			sed -i "s/MAILCOW_HOST.MAILCOW_DOMAIN/${sys_hostname}.${sys_domain}/g" /var/www/zpush/backend/imap/config.php
-			sed -i "s/MAILCOW_DAV_HOST.MAILCOW_DOMAIN/${httpd_dav_subdomain}.${sys_domain}/g" /var/www/zpush/backend/caldav/config.php
-			sed -i "s/MAILCOW_DAV_HOST.MAILCOW_DOMAIN/${httpd_dav_subdomain}.${sys_domain}/g" /var/www/zpush/backend/carddav/config.php
-			mkdir /var/{lib,log}/z-push 2>/dev/null
-			chown -R www-data: /var/{lib,log}/z-push
 			# Cleaning up old files
 			sed -i '/test -d /var/run/fetchmail/d' /etc/rc.local > /dev/null 2>&1
 			rm /etc/cron.d/pfadminfetchmail > /dev/null 2>&1
 			rm /etc/mail/postfixadmin/fetchmail.conf > /dev/null 2>&1
 			rm /usr/local/bin/fetchmail.pl > /dev/null 2>&1
 			;;
-		roundcube)
-			mkdir -p /var/www/mail/rc
-			tar xf roundcube/inst/${roundcube_version}.tar -C roundcube/inst/
-			cp -R roundcube/inst/${roundcube_version}/* /var/www/mail/rc/
-			if [[ $is_upgradetask != "yes" ]]; then
-				cp -R roundcube/conf/* /var/www/mail/rc/
-				sed -i "s/my_mailcowuser/$my_mailcowuser/g" /var/www/mail/rc/plugins/password/config.inc.php
-				sed -i "s/my_mailcowpass/$my_mailcowpass/g" /var/www/mail/rc/plugins/password/config.inc.php
-				sed -i "s/my_mailcowdb/$my_mailcowdb/g" /var/www/mail/rc/plugins/password/config.inc.php
-				sed -i "s/my_dbhost/$my_dbhost/g" /var/www/mail/rc/plugins/password/config.inc.php
-				sed -i "s/my_dbhost/$my_dbhost/g" /var/www/mail/rc/config/config.inc.php
-				sed -i "s/my_rcuser/$my_rcuser/g" /var/www/mail/rc/config/config.inc.php
-				sed -i "s/my_rcpass/$my_rcpass/g" /var/www/mail/rc/config/config.inc.php
-				sed -i "s/my_rcdb/$my_rcdb/g" /var/www/mail/rc/config/config.inc.php
-				sed -i "s/conf_rcdeskey/$(genpasswd)/g" /var/www/mail/rc/config/config.inc.php
-				sed -i "s/MAILCOW_HOST.MAILCOW_DOMAIN/${sys_hostname}.${sys_domain}/g" /var/www/mail/rc/config/config.inc.php
-				mysql --host ${my_dbhost} -u ${my_rcuser} -p${my_rcpass} ${my_rcdb} < /var/www/mail/rc/SQL/mysql.initial.sql
-			else
-				chmod +x roundcube/inst/${roundcube_version}/bin/installto.sh
-				roundcube/inst/${roundcube_version}/bin/installto.sh /var/www/mail/rc
-			fi
-			chown -R www-data: /var/www/mail/rc
-			rm -rf roundcube/inst/${roundcube_version}
-			rm -rf /var/www/mail/rc/installer/
+		sogo)
+			echo "My cat has the runs, have to leave to get some meds. Will push this later."
 			;;
 		rsyslogd)
 			if [[ -d /etc/rsyslog.d ]]; then
@@ -639,12 +566,7 @@ DatabaseMirror clamav.inode.at" >> /etc/clamav/freshclam.conf
 			;;
 		restartservices)
 			[[ -f /lib/systemd/systemd ]] && echo "$(textb [INFO]) - Restarting services, this may take a few seconds..."
-			if [[ ${httpd_platform} == "nginx" ]]; then
-				fpm="php5-fpm"
-			else
-				fpm=""
-			fi
-			for var in jetty8 fail2ban rsyslog ${httpd_platform} ${fpm} spamassassin fuglu dovecot postfix opendkim clamav-daemon
+			for var in jetty8 fail2ban rsyslog apache2  spamassassin fuglu dovecot postfix opendkim clamav-daemon
 			do
 				service $var stop
 				sleep 1.5
@@ -661,7 +583,7 @@ DatabaseMirror clamav.inode.at" >> /etc/clamav/freshclam.conf
 			#		echo "$(textb [INFO]) - non-essential - Cannot find SRV record \"${srv}._tcp.${sys_domain}\""
 			#	fi
 			#done
-			for a in autodiscover ${sys_hostname} ${httpd_dav_subdomain}
+			for a in autodiscover ${sys_hostname}
 			do
 				if [[ -z $(dig a ${a}.${sys_domain} @8.8.8.8 +short) ]]; then
 					echo "$(yellowb [WARN]) - Cannot find A record \"${a}.${sys_domain}\""
@@ -688,14 +610,6 @@ upgradetask() {
 		echo "$(redb [ERR]) - Upgrade not supported"
 		exit 1
 	fi
-	if [[ ! -z $(which apache2) && ! -z $(apache2 -v | grep "2.4") ]]; then
-		httpd_platform="apache2"
-	elif [[ ! -z $(which nginx) ]]; then
-		httpd_platform="nginx"
-	else
-		echo "$(pinkb [NOTICE]) - Falling back to Nginx: Apache 2.4 was not available!"
-		httpd_platform="nginx"
-	fi
 	echo "$(textb [INFO]) - Checking for upgrade prerequisites and collecting system information..."
 	if [[ -z $(which lsb_release) ]]; then
 		apt-get -y update > /dev/null ; apt-get -y install lsb-release > /dev/null 2>&1
@@ -709,18 +623,13 @@ upgradetask() {
 	my_mailcowuser=${readconf[1]}
 	my_mailcowpass=${readconf[2]}
 	my_mailcowdb=${readconf[3]}
-	old_des_key_rc=${readconf[4]}
-	my_rcuser=${readconf[5]}
-	my_rcpass=${readconf[6]}
-	my_rcdb=${readconf[7]}
 	echo "$(pinkb [NOTICE]) - mailcow needs your SQL root password to perform higher privilege level tasks"
         read -p "Please enter your SQL root user password: " my_rootpw
 	while [[ $(mysql --host ${my_dbhost} -u root -p${my_rootpw} -e ""; echo $?) -ne 0 ]]; do
 		read -p "Please enter your SQL root user password: " my_rootpw
 	done
-	httpd_dav_subdomain=${readconf[8]}
 	[[ -z $my_dbhost ]] && my_dbhost="localhost"
-	for var in httpd_platform httpd_dav_subdomain sys_hostname sys_domain sys_timezone my_dbhost my_mailcowdb my_mailcowuser my_mailcowpass my_rcuser my_rcpass my_rcdb
+	for var in sys_hostname sys_domain sys_timezone my_dbhost my_mailcowdb my_mailcowuser my_mailcowpass
 	do
 		if [[ -z ${!var} ]]; then
 			echo "$(redb [ERR]) - Could not gather required information: \"${var}\" empty, upgrade failed..."
@@ -735,11 +644,7 @@ $(textb "Domain")                 ${sys_domain}
 $(textb "FQDN")                   ${sys_hostname}.${sys_domain}
 $(textb "Timezone")               ${sys_timezone}
 $(textb "mailcow MySQL")          ${my_mailcowuser}:${my_mailcowpass}@${my_dbhost}/${my_mailcowdb}
-$(textb "Roundcube MySQL")        ${my_rcuser}:${my_rcpass}@${my_dbhost}/${my_rcdb}
-$(textb "Web server")             ${httpd_platform^}
 $(textb "Web root")               https://${sys_hostname}.${sys_domain}
-$(textb "DAV web root")           https://${httpd_dav_subdomain}.${sys_domain}
-$(textb "Autodiscover (Z-Push)")  https://autodiscover.${sys_domain}
 
 --------------------------------------------------------
 THIS UPGRADE WILL RESET SOME OF YOUR CONFIGURATION FILES
@@ -755,16 +660,10 @@ A backup will be stored in ./before_upgrade_$timestamp
 	mkdir before_upgrade_$timestamp
 	cp -R /var/www/mail/ before_upgrade_$timestamp/mail_wwwroot
 	mysqldump -u ${my_mailcowuser} -p${my_mailcowpass} ${my_mailcowdb} > backup_mailcow_db.sql 2>/dev/null
-	mysqldump -u ${my_rcuser} -p${my_rcpass} ${my_rcdb} > backup_roundcube_db.sql 2>/dev/null
-	cp -R /etc/{postfix,dovecot,spamassassin,fail2ban,${httpd_platform},fuglu,mysql,php5,clamav} before_upgrade_$timestamp/
+	cp -R /etc/{postfix,dovecot,spamassassin,fail2ban,apache2,fuglu,mysql,php5,clamav} before_upgrade_$timestamp/
 	echo -e "$(greenb "[OK]")"
 	echo -en "\nStopping services, this may take a few seconds... \t\t"
-	if [[ ${httpd_platform} == "nginx" ]]; then
-		fpm="php5-fpm"
-	else
-		fpm=""
-	fi
-	for var in fail2ban rsyslog ${httpd_platform} ${fpm} spamassassin fuglu dovecot postfix opendkim clamav-daemon
+	for var in fail2ban rsyslog apache2 spamassassin fuglu dovecot postfix opendkim clamav-daemon
 	do
 		service $var stop > /dev/null 2>&1
 	done
@@ -804,10 +703,7 @@ A backup will be stored in ./before_upgrade_$timestamp
 	mv /var/www/PFLOG /var/mailcow/log/pflogsumm.log 2> /dev/null
 
 	installtask webserver
-	returnwait "Webserver configuration" "Roundcube configuration"
-
-	installtask roundcube
-	returnwait "Roundcube configuration" "OpenDKIM configuration"
+	returnwait "Webserver configuration" "OpenDKIM configuration"
 
 	installtask opendkim
 	returnwait "OpenDKIM configuration" "Rsyslogd configuration"

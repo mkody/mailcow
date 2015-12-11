@@ -30,7 +30,6 @@ echo --------------------------------- >> installer.log
 echo UPGRADE to ${mailcow_version} on $(date) >> installer.log
 echo --------------------------------- >> installer.log
 echo Fail2ban version: ${fail2ban_version} >> installer.log
-echo Roundcube version: ${roundcube_version} >> installer.log
 echo FuGlu version: ${fuglu_version} >> installer.log
 echo --------------------------------- >> installer.log
 	exit 0
@@ -46,7 +45,6 @@ echo "    $(textb "Hostname")            ${sys_hostname}
     $(textb "FQDN")                ${sys_hostname}.${sys_domain}
     $(textb "Timezone")            ${sys_timezone}
     $(textb "mailcow MySQL")       ${my_mailcowuser}:${my_mailcowpass}@${my_dbhost}/${my_mailcowdb}
-    $(textb "Roundcube MySQL")     ${my_rcuser}:${my_rcpass}@${my_dbhost}/${my_rcdb}
     $(textb "mailcow admin user")  ${mailcow_admin_user}
 "
 
@@ -59,10 +57,6 @@ echo MySQL mailcow database: ${my_mailcowdb} >> installer.log
 echo MySQL mailcow username: ${my_mailcowuser} >> installer.log
 echo MySQL mailcow password: ${my_mailcowpass} >> installer.log
 echo --------------------------------- >> installer.log
-echo MySQL Roundcube database: ${my_rcdb} >> installer.log
-echo MySQL Roundcube username: ${my_rcuser} >> installer.log
-echo MySQL Roundcube password: ${my_rcpass} >> installer.log
-echo --------------------------------- >> installer.log
 echo Only set when MySQL was not available >> installer.log
 echo MySQL root password: ${my_rootpw} >> installer.log
 echo --------------------------------- >> installer.log
@@ -74,11 +68,9 @@ echo FQDN: ${sys_hostname}.${sys_domain} >> installer.log
 echo Timezone: ${sys_timezone} >> installer.log
 echo --------------------------------- >> installer.log
 echo Web root: https://${sys_hostname}.${sys_domain} >> installer.log
-echo DAV web root: https://${httpd_dav_subdomain}.${sys_domain} >> installer.log
-echo Autodiscover \(Z-Push\): https://autodiscover.${sys_domain} >> installer.log
+echo Autodiscover: https://autodiscover.${sys_domain} >> installer.log
 echo --------------------------------- >> installer.log
 echo Fail2ban version: $fail2ban_version >> installer.log
-echo Roundcube version: $roundcube_version >> installer.log
 echo FuGlu version: ${fuglu_version} >> installer.log
 echo mailcow version: ${mailcow_version} >> installer.log
 echo --------------------------------- >> installer.log
@@ -111,10 +103,7 @@ installtask spamassassin
 returnwait "Spamassassin configuration" "Webserver configuration"
 
 installtask webserver
-returnwait "Webserver configuration" "Roundcube configuration"
-
-installtask roundcube
-returnwait "Roundcube configuration" "Rsyslogd configuration"
+returnwait "Webserver configuration" "Rsyslogd configuration"
 
 installtask rsyslogd
 returnwait "Rsyslogd configuration" "Fail2ban configuration"

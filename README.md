@@ -1,6 +1,6 @@
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-![mailcow](https://www.debinux.de/256.png)
+![mailcow](http://www.debinux.de/mailcow_sogo.png)
 
 - [mailcow](#mailcow)
 - [Introduction](#introduction)
@@ -11,7 +11,7 @@
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-mailcow
+mailcow (SOGo edition, nightly)
 =====
 
 mailcow is a mail server suite based on Dovecot, Postfix and other open source software, that provides a modern Web UI for administration.
@@ -29,7 +29,6 @@ A summary of what software is installed with which features enabled.
 * Multi-SAN self-signed SSL certificate for all installed and supporting services
 * Nginx or Apache2 installation (+PHP5-FPM)
 * MySQL or MariaDB database backend, remote database support
-* **Z-Push** integration (IMAP, CalDAV and CardDAV)
 * DNS-Checks (PTR, A-Record, SPF etc.)
 * Learn ham and spam, [Heinlein Support](https://www.heinlein-support.de/) SA rules included
 * Fail2ban brute force protection
@@ -59,12 +58,6 @@ A summary of what software is installed with which features enabled.
 * (IMAP) Quotas
 * LMTP service for Postfix virtual transport
 * SSL based on BetterCrypto
-
-**Roundcube**
-* ManageSieve support (w/ vacation)
-* Users can change password
-* Attachment reminder (multiple locales)
-* Zip-download marked messages
 
 # Before You Begin
 - **Please remove any web- and mail services** running on your server. I recommend using a clean Debian minimal installation.
@@ -108,12 +101,9 @@ nano mailcow.config
 * **sys_hostname** - Hostname without domain
 * **sys_domain** - Domain name. "$sys_hostname.$sys_domain" equals to FQDN.
 * **sys_timezone** - The timezone must be defined in a valid format (Europe/Berlin, America/New_York etc.)
-* **httpd_platform** - Select wether to use Nginx ("nginx") or Apache2 ("apache2"). Nginx is default.
-* **httpd_dav_subdomain** - A dedicated subdomain for Cal- and CardDAV. Must not be sys_hostname.
 * **my_dbhost** - ADVANCED: Leave as-is ("localhost") for a local database installation. Anything but "localhost" or "127.0.0.1" is recognized as a remote installation.
 * **my_usemariadb** - Use MariaDB instead of MySQL. Only valid for local databases. Installer stops when MariaDB is detected, but MySQL selected - and vice versa.
 * **my_mailcowdb, my_mailcowuser, my_mailcowpass** - SQL database name, username and password for use with Postfix. **You can use the default values.**
-* **my_rcdb, my_rcuser, my_rcpass** - SQL database name, username and password for Roundcube. **You can use the default values.**
 * **my_rootpw** - SQL root password is generated automatically by default. You can define a complex password here if you want to. *Set to your current root password to use an existing SQL instance*.
 * **mailcow_admin_user and mailcow_admin_pass** - mailcow administrator. Password policy: minimum length 8 chars, must contain uppercase and lowercase letters and at least 2 digits. **You can use the default values**.
 * **inst_debug** - Sets Bash mode -x
