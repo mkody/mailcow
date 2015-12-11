@@ -693,10 +693,7 @@ A backup will be stored in ./before_upgrade_$timestamp
 	returnwait "ClamAV configuration" "Spamassassin configuration"
 
 	installtask spamassassin
-	returnwait "Spamassassin configuration" "SOGo configuration"
-
-	installtask sogo
-	returnwait "SOGo configuration" "Webserver configuration"
+	returnwait "Spamassassin configuration" "Webserver configuration"
 
 	rm -rf /var/lib/php5/sessions/*
 	mkdir -p /var/mailcow/log
@@ -704,7 +701,10 @@ A backup will be stored in ./before_upgrade_$timestamp
 	mv /var/www/PFLOG /var/mailcow/log/pflogsumm.log 2> /dev/null
 
 	installtask webserver
-	returnwait "Webserver configuration" "OpenDKIM configuration"
+	returnwait "Webserver configuration" "SOGo configuration"
+
+	installtask sogo
+	returnwait "SOGo configuration" "OpenDKIM configuration"
 
 	installtask opendkim
 	returnwait "OpenDKIM configuration" "Rsyslogd configuration"
