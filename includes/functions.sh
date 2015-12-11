@@ -234,7 +234,7 @@ DEBIAN_FRONTEND=noninteractive apt-get --force-yes -y install dovecot-common dov
 					for i in $(ls /etc/letsencrypt/live); do
 						if [[ ! -z $(openssl x509 -in "/etc/letsencrypt/live/$i/fullchain.pem" -text -noout | \
 							grep -E "DNS:autodiscover.${sys_domain}" | \
-							grep -E "DNS:${sys_hostname}.${sys_domain}" ]]; then
+							grep -E "DNS:${sys_hostname}.${sys_domain}") ]]; then
 									LE_CERT_PATH="/etc/letsencrypt/live/$i"
 									break
 						fi
