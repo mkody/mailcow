@@ -169,7 +169,7 @@ installtask() {
 				apt-get -y update >/dev/null
 			elif [[ $dist_codename == "jessie" ]]; then
 				echo "$(textb [INFO]) - Adding official SOGo repository..."
-				echo "deb http://inverse.ca/ubuntu jessie jessie" > /etc/apt/sources.list.d/sogo.list
+				echo "deb http://inverse.ca/debian jessie jessie" > /etc/apt/sources.list.d/sogo.list
 				apt-key adv --keyserver keys.gnupg.net --recv-key 0x810273C4 > /dev/null 2>&1
 				apt-get -y update >/dev/null
 			fi
