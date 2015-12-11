@@ -516,6 +516,7 @@ DatabaseMirror clamav.inode.at" >> /etc/clamav/freshclam.conf
 			if [[ -z $(mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -e "SHOW TABLES LIKE 'sogo_view'" -N -B) ]]; then
 				mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -e "CREATE VIEW sogo_view (c_uid, c_name, c_password, c_cn, mail, home) AS SELECT username, username, password, CONVERT(name USING latin1), username, CONCAT('/var/vmail/', maildir) FROM mailbox WHERE active=1;" -N -B
 			fi
+			# Will use su sogo -s /bin/bash -c in more stable versions
 			cp sogo/conf/sogo.conf /etc/sogo/sogo.conf
 			for var in sys_hostname sys_domain sys_timezone my_dbhost my_mailcowdb my_mailcowuser my_mailcowpass
 			do
