@@ -194,7 +194,7 @@ php5-intl php5-xsl libawl-php php5-mcrypt php5-mysql php5-sqlite libawl-php php5
 postfix postfix-mysql postfix-pcre postgrey pflogsumm spamassassin spamc sudo bzip2 curl mpack opendkim opendkim-tools unzip clamav-daemon \
 python-magic unrar-free liblockfile-simple-perl libdbi-perl libmime-base64-urlsafe-perl libtest-tempdir-perl liblogger-syslog-perl bsd-mailx \
 openjdk-7-jre-headless libcurl4-openssl-dev libexpat1-dev rrdtool mailgraph fcgiwrap spawn-fcgi \
-solr-jetty apache2 apache2-utils libapache2-mod-php5 sogo > /dev/null
+solr-jetty apache2 apache2-utils libapache2-mod-php5 sogo memcached > /dev/null
 			if [ "$?" -ne "0" ]; then
 				echo "$(redb [ERR]) - Package installation failed"
 				exit 1
@@ -264,7 +264,7 @@ DEBIAN_FRONTEND=noninteractive apt-get --force-yes -y install dovecot-common dov
 				mysql --defaults-file=/etc/mysql/debian.cnf -e "UPDATE mysql.user SET Password=PASSWORD('$my_rootpw') WHERE USER='root'; FLUSH PRIVILEGES;"
 			fi
 			mysql --host ${my_dbhost} -u root -p${my_rootpw} -e "DROP DATABASE IF EXISTS $my_mailcowdb;"
-			mysql --host ${my_dbhost} -u root -p${my_rootpw} -e "CREATE DATABASE $my_mailcowdb; GRANT SELECT, UPDATE, DELETE, INSERT ON $my_mailcowdb.* TO '$my_mailcowuser'@'%' IDENTIFIED BY '$my_mailcowpass';"
+			mysql --host ${my_dbhost} -u root -p${my_rootpw} -e "CREATE DATABASE $my_mailcowdb; GRANT ALL ON $my_mailcowdb.* TO '$my_mailcowuser'@'%' IDENTIFIED BY '$my_mailcowpass';"
 			mysql --host ${my_dbhost} -u root -p${my_rootpw} -e "GRANT SELECT ON $my_mailcowdb.* TO 'vmail'@'%'; FLUSH PRIVILEGES;"
 			;;
 		postfix)
@@ -499,15 +499,6 @@ DatabaseMirror clamav.inode.at" >> /etc/clamav/freshclam.conf
 			sed -i "s/my_mailcowdb/$my_mailcowdb/g" /var/www/mail/inc/vars.inc.php
 			chown -R www-data: /var/www/{.,mail} /var/lib/php5/sessions /var/mailcow/mailbox_backup_env
 			mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} < webserver/htdocs/init.sql
-			if [[ -z $(mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -e "SHOW INDEX FROM propertystorage WHERE KEY_NAME = 'path_property';" -N -B) ]]; then
-				mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -e "CREATE UNIQUE INDEX path_property ON propertystorage (path(600), name(100));" -N -B
-			fi
-			if [[ -z $(mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -e "SHOW INDEX FROM zpush_states WHERE KEY_NAME = 'idx_zpush_states_unique';" -N -B) ]]; then
-				mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -e "CREATE unique index idx_zpush_states_unique on zpush_states (device_id, uuid, state_type, counter);" -N -B
-			fi
-			if [[ -z $(mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -e "SHOW COLUMNS FROM domain LIKE 'relay_all_recipients';" -N -B) ]]; then
-				mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -e "ALTER TABLE domain ADD relay_all_recipients tinyint(1) NOT NULL DEFAULT '0';" -N -B
-			fi
 			if [[ $(mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -s -N -e "SELECT * FROM admin;" | wc -l) -lt 1 ]]; then
 				mailcow_admin_pass_hashed=$(doveadm pw -s SSHA256 -p $mailcow_admin_pass)
 				mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -e "INSERT INTO admin VALUES ('$mailcow_admin_user','$mailcow_admin_pass_hashed',1,now(),now(),1);"
@@ -522,7 +513,14 @@ DatabaseMirror clamav.inode.at" >> /etc/clamav/freshclam.conf
 			rm /usr/local/bin/fetchmail.pl > /dev/null 2>&1
 			;;
 		sogo)
-			echo "My cat has the runs, have to leave to get some meds. Will push this later."
+			if [[ -z $(mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -e "SHOW TABLES LIKE 'sogo_view'" -N -B) ]]; then
+				mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -e "CREATE VIEW sogo_view (c_uid, c_name, c_password, c_cn, mail, home) AS SELECT username, username, password, CONVERT(name USING latin1), username, CONCAT('/var/vmail/', maildir) FROM mailbox WHERE active=1;" -N -B
+			fi
+			cp sogo/conf/sogo.conf /etc/sogo/sogo.conf
+			for var in sys_hostname sys_domain sys_timezone my_dbhost my_mailcowdb my_mailcowuser my_mailcowpass
+			do
+                		sed -i "s/${var}/${!var}/g" /etc/sogo/sogo.conf
+			done
 			;;
 		rsyslogd)
 			if [[ -d /etc/rsyslog.d ]]; then
@@ -566,7 +564,7 @@ DatabaseMirror clamav.inode.at" >> /etc/clamav/freshclam.conf
 			;;
 		restartservices)
 			[[ -f /lib/systemd/systemd ]] && echo "$(textb [INFO]) - Restarting services, this may take a few seconds..."
-			for var in jetty8 fail2ban rsyslog apache2  spamassassin fuglu dovecot postfix opendkim clamav-daemon
+			for var in jetty8 fail2ban rsyslog apache2 spamassassin fuglu dovecot postfix opendkim clamav-daemon sogo
 			do
 				service $var stop
 				sleep 1.5
@@ -663,7 +661,7 @@ A backup will be stored in ./before_upgrade_$timestamp
 	cp -R /etc/{postfix,dovecot,spamassassin,fail2ban,apache2,fuglu,mysql,php5,clamav} before_upgrade_$timestamp/
 	echo -e "$(greenb "[OK]")"
 	echo -en "\nStopping services, this may take a few seconds... \t\t"
-	for var in fail2ban rsyslog apache2 spamassassin fuglu dovecot postfix opendkim clamav-daemon
+	for var in fail2ban rsyslog apache2 spamassassin fuglu dovecot postfix opendkim clamav-daemon stop
 	do
 		service $var stop > /dev/null 2>&1
 	done
@@ -695,7 +693,10 @@ A backup will be stored in ./before_upgrade_$timestamp
 	returnwait "ClamAV configuration" "Spamassassin configuration"
 
 	installtask spamassassin
-	returnwait "Spamassassin configuration" "Webserver configuration"
+	returnwait "Spamassassin configuration" "SOGo configuration"
+
+	installtask sogo
+	returnwait "SOGo configuration" "Webserver configuration"
 
 	rm -rf /var/lib/php5/sessions/*
 	mkdir -p /var/mailcow/log

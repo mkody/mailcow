@@ -100,7 +100,10 @@ installtask clamav
 returnwait "ClamAV configuration" "Spamassassin configuration"
 
 installtask spamassassin
-returnwait "Spamassassin configuration" "Webserver configuration"
+returnwait "Spamassassin configuration" "SOGo configuration"
+
+installtask sogo
+returnwait "SOGo configuration" "Webserver configuration"
 
 installtask webserver
 returnwait "Webserver configuration" "Rsyslogd configuration"
