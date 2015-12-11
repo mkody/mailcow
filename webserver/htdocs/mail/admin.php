@@ -441,7 +441,7 @@ elseif (isset($_SESSION['mailcow_cc_loggedin']) && $_SESSION['mailcow_cc_loggedi
 		<input name="pass_user" type="password" id="pass_user" class="form-control" required>
 	</div>
 	<button type="submit" class="btn btn-sm btn-success" value="Login">Login</button>
-	<a class="btn btn-sm btn-primary" href="/rc">Webmail</a>
+	<a class="btn btn-sm btn-primary" href="/SOGo">SOGo</a>
 	<hr>
 	<p><strong>Hint:</strong> Run "mc_resetadmin" from a shell to reset the password.</p>
 </form>

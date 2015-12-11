@@ -26,15 +26,6 @@ function check_login($link, $user, $pass) {
 			return "domainadmin";
 		}
 	}
-	$result = mysqli_query($link, "SELECT password FROM mailbox WHERE active='1' AND username='$user'");
-	while ($row = mysqli_fetch_array($result, MYSQLI_NUM)) {
-		$row = "'".$row[0]."'";
-		exec("echo ".$pass." | doveadm pw -s ".$GLOBALS['PASS_SCHEME']." -t ".$row, $out, $return);
-		if (strpos($out[0], "verified") !== false && $return == "0") {
-			unset($_SESSION['ldelay']);
-			return "user";
-		}
-	}
 	if (!isset($_SESSION['ldelay'])) {
 		$_SESSION['ldelay'] = "0.1";
 	}
@@ -1176,9 +1167,9 @@ function mailbox_edit_dav($link, $postarray) {
 	foreach (array_flip($postarray['adb_displayname']) as $adb_id) {
 		// Check address book access
 		if (!mysqli_result(mysqli_query($link, "SELECT * FROM calendars, addressbooks
-			WHERE calendars.principaluri='principals/$logged_in_as' 
+			WHERE calendars.principaluri='principals/$logged_in_as'
 			AND addressbooks.principaluri='principals/$logged_in_as'
-			AND addressbooks.id='$adb_id'")) && $logged_in_role == "user") { 
+			AND addressbooks.id='$adb_id'")) && $logged_in_role == "user") {
 			$_SESSION['return'] = array(
 				'type' => 'danger',
 				'msg' => 'Permission denied'
@@ -1208,7 +1199,7 @@ function mailbox_edit_dav($link, $postarray) {
 		IN (SELECT id FROM principals
 			WHERE uri='principals/$logged_in_as/calendar-proxy-read'
 			OR uri='principals/$logged_in_as/calendar-proxy-write')";
-	if (!mysqli_query($link, $clean_cal)) { 
+	if (!mysqli_query($link, $clean_cal)) {
 		$_SESSION['return'] = array(
 			'type' => 'danger',
 			'msg' => 'MySQL Error: '.mysqli_error($link)
@@ -1218,9 +1209,9 @@ function mailbox_edit_dav($link, $postarray) {
 	foreach (array_flip($postarray['cal_displayname']) as $cal_id) {
 		/* Check cal access */
 		if (!mysqli_result(mysqli_query($link, "SELECT * FROM calendars, addressbooks
-			WHERE calendars.principaluri='principals/$logged_in_as' 
+			WHERE calendars.principaluri='principals/$logged_in_as'
 			AND addressbooks.principaluri='principals/$logged_in_as'
-			AND calendars.id='$cal_id'")) && $logged_in_role == "user") { 
+			AND calendars.id='$cal_id'")) && $logged_in_role == "user") {
 			$_SESSION['return'] = array(
 				'type' => 'danger',
 				'msg' => 'Permission denied'
