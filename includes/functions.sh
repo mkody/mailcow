@@ -519,7 +519,7 @@ DatabaseMirror clamav.inode.at" >> /etc/clamav/freshclam.conf
 			cp sogo/conf/sogo.conf /etc/sogo/sogo.conf
 			for var in sys_hostname sys_domain sys_timezone my_dbhost my_mailcowdb my_mailcowuser my_mailcowpass
 			do
-                		sed -i "s/${var}/${!var}/g" /etc/sogo/sogo.conf
+				sed -i "s#${var}#${!var}#g" /etc/sogo/sogo.conf
 			done
 			;;
 		rsyslogd)
