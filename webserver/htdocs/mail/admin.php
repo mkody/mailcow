@@ -167,7 +167,7 @@ $_SESSION['return_to'] = basename($_SERVER['PHP_SELF']);
 <?php
 $resultselect = mysqli_query($link, "SELECT username FROM mailbox");
 while ($row = mysqli_fetch_array($resultselect)) {
-	if (strpos(file_get_contents($MC_MBOX_BACKUP), $row['username'])) {
+	if (strpos(file_get_contents($MC_MBOX_BACKUP_ENV), $row['username'])) {
 		echo "<option selected>".$row['username']."</option>";
 	}
 	else {
@@ -441,7 +441,7 @@ elseif (isset($_SESSION['mailcow_cc_loggedin']) && $_SESSION['mailcow_cc_loggedi
 		<input name="pass_user" type="password" id="pass_user" class="form-control" required>
 	</div>
 	<button type="submit" class="btn btn-sm btn-success" value="Login">Login</button>
-	<a class="btn btn-sm btn-primary" href="/SOGo">SOGo</a>
+	<a class="btn btn-sm btn-primary" href="/rc">Webmail</a>
 	<hr>
 	<p><strong>Hint:</strong> Run "mc_resetadmin" from a shell to reset the password.</p>
 </form>
