@@ -535,7 +535,7 @@ DatabaseMirror clamav.inode.at" >> /etc/clamav/freshclam.conf
 			defaults write sogod SOGoACLsSendEMailNotifications YES;
 			defaults write sogod SOGoFoldersSendEMailNotifications YES;
 			defaults write sogod SOGoLanguage English;
-			defaults write sogod SOGoMemcachedHost '/var/run/memcached.sock';
+			defaults write sogod SOGoMemcachedHost '127.0.0.1';
 			defaults write sogod SOGoMaximumPingInterval 300;
 			defaults write sogod SOGoMaximumSyncInterval 3;
 			defaults write sogod SOGoInternalSyncInterval 3;"
