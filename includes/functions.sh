@@ -481,10 +481,9 @@ DatabaseMirror clamav.inode.at" >> /etc/clamav/freshclam.conf
 			rm /etc/apache2/sites-enabled/{mailcow*,000-0-mailcow,000-0-fufix,000-0-mailcow.conf} 2>/dev/null
 			cp webserver/apache2/conf/sites-available/mailcow.conf /etc/apache2/sites-available/
 			ln -s /etc/apache2/sites-available/mailcow.conf /etc/apache2/sites-enabled/000-0-mailcow.conf 2>/dev/null
-			sed -i "s/\"\MAILCOW_HOST.MAILCOW_DOMAIN\"/\"${sys_hostname}.${sys_domain}\"/g" /etc/apache2/sites-available/mailcow.conf
-			sed -i "s/\"autoconfig.MAILCOW_DOMAIN\"/\"autoconfig.${sys_domain}\"/g" /etc/apache2/sites-available/mailcow.conf
-			sed -i "s/MAILCOW_DOMAIN\"/${sys_domain}\"/g" /etc/apache2/sites-available/mailcow.conf
-			sed -i "/date.timezone/c\php_value date.timezone ${sys_timezone}" /etc/apache2/sites-available/mailcow.conf
+			sed -i 's/MAILCOW_HOST/'"${sys_hostname}"'/g' /etc/apache2/sites-available/mailcow.conf
+			sed -i 's/MAILCOW_DOMAIN/'"${sys_domain}"'/g' /etc/apache2/sites-available/mailcow.conf
+			sed -i 's/MAILCOW_TIMEZONE/'"${sys_timezone}'"/g' /etc/apache2/sites-available/mailcow.conf
 			a2enmod rewrite ssl headers cgi proxy proxy_http > /dev/null 2>&1
 			mkdir /var/lib/php5/sessions 2> /dev/null
 			cp -R webserver/htdocs/mail /var/www/
@@ -492,7 +491,6 @@ DatabaseMirror clamav.inode.at" >> /etc/clamav/freshclam.conf
 			find /var/www/mail -type f -exec chmod 644 {} \;
 			touch /var/mailcow/mailbox_backup_env
 			echo none > /var/mailcow/log/pflogsumm.log
-			sed -i "s/mailcow_sub/${sys_hostname}/g" /var/www/mail/autoconfig.xml
 			sed -i "s/my_dbhost/$my_dbhost/g" /var/www/mail/inc/vars.inc.php
 			sed -i "s/my_mailcowpass/$my_mailcowpass/g" /var/www/mail/inc/vars.inc.php
 			sed -i "s/my_mailcowuser/$my_mailcowuser/g" /var/www/mail/inc/vars.inc.php
@@ -506,11 +504,6 @@ DatabaseMirror clamav.inode.at" >> /etc/clamav/freshclam.conf
 			else
 				echo "$(textb [INFO]) - At least one administrator exists, will not create another mailcow administrator"
 			fi
-			# Cleaning up old files
-			sed -i '/test -d /var/run/fetchmail/d' /etc/rc.local > /dev/null 2>&1
-			rm /etc/cron.d/pfadminfetchmail > /dev/null 2>&1
-			rm /etc/mail/postfixadmin/fetchmail.conf > /dev/null 2>&1
-			rm /usr/local/bin/fetchmail.pl > /dev/null 2>&1
 			;;
 		sogo)
 			if [[ -z $(mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -e "SHOW TABLES LIKE 'sogo_view'" -N -B) ]]; then
