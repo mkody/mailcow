@@ -483,7 +483,6 @@ DatabaseMirror clamav.inode.at" >> /etc/clamav/freshclam.conf
 			ln -s /etc/apache2/sites-available/mailcow.conf /etc/apache2/sites-enabled/000-0-mailcow.conf 2>/dev/null
 			sed -i "s/MAILCOW_HOST/${sys_hostname}/g" /etc/apache2/sites-available/mailcow.conf
 			sed -i "s/MAILCOW_DOMAIN/${sys_domain}/g" /etc/apache2/sites-available/mailcow.conf
-			sed -i "s#MAILCOW_TIMEZONE#${sys_timezone}#g" /etc/apache2/sites-available/mailcow.conf
 			a2enmod rewrite ssl headers cgi proxy proxy_http > /dev/null 2>&1
 			mkdir /var/lib/php5/sessions 2> /dev/null
 			cp -R webserver/htdocs/mail /var/www/
