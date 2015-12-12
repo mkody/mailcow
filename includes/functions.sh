@@ -529,7 +529,8 @@ DatabaseMirror clamav.inode.at" >> /etc/clamav/freshclam.conf
 			defaults write sogod SOGoSMTPServer 127.0.0.1:588;
 			defaults write sogod SOGoMailingMechanism smtp;
 			defaults write sogod SOGoMailCustomFromEnabled YES;
-			defaults write sogod SOGoPasswordChangeEnabled YES;
+			# Temp. set to NO, doveadm verifies hashes by {HASHTYPE}HASH, SOGo only adds the hash but is fine the other way round, weird.
+			defaults write sogod SOGoPasswordChangeEnabled NO;
 			defaults write sogod SOGoAppointmentSendEMailNotifications YES;
 			defaults write sogod SOGoACLsSendEMailNotifications YES;
 			defaults write sogod SOGoFoldersSendEMailNotifications YES;
