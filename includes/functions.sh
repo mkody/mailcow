@@ -509,42 +509,35 @@ DatabaseMirror clamav.inode.at" >> /etc/clamav/freshclam.conf
 			if [[ -z $(mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -e "SHOW TABLES LIKE 'sogo_view'" -N -B) ]]; then
 				mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -e "CREATE VIEW sogo_view (c_uid, c_name, c_password, c_cn, mail, home) AS SELECT username, username, password, CONVERT(name USING latin1), username, CONCAT('/var/vmail/', maildir) FROM mailbox WHERE active=1;" -N -B
 			fi
-
-			for var in sys_hostname sys_domain sys_timezone my_dbhost my_mailcowdb my_mailcowuser my_mailcowpass
-			do
-				EXPORT ${var}
-			done
-			su - sogo -s /bin/bash -c "
-defaults write sogod SOGoUserSources '({type = sql;id = directory;viewURL = mysql://${my_mailcowuser}:${my_mailcowpass}@${my_dbhost}:3306/${my_mailcowdb}/sogo_view;canAuthenticate = YES;isAddressBook = YES;displayName = \"Global Address Book\";userPasswordAlgorithm = ssha256;})'
-defaults write sogod SOGoProfileURL 'mysql://${my_mailcowuser}:${my_mailcowpass}@${my_dbhost}:3306/${my_mailcowdb}/sogo_user_profile'
-defaults write sogod OCSFolderInfoURL 'mysql://${my_mailcowuser}:${my_mailcowpass}@${my_dbhost}:3306/${my_mailcowdb}/sogo_folder_info'
-defaults write sogod OCSSessionsFolderURL 'mysql://${my_mailcowuser}:${my_mailcowpass}@${my_dbhost}:3306/${my_mailcowdb}/sogo_sessions_folder'
-defaults write sogod SOGoPageTitle ${sys_hostname}.${sys_domain};
-defaults write sogod SOGoForwardEnabled YES;
-defaults write sogod SOGoMailAuxiliaryUserAccountsEnabled YES;
-defaults write sogod SOGoTimeZone ${sys_timezone};
-defaults write sogod SOGoMailDomain ${sys_domain};
-defaults write sogod SOGoAppointmentSendEMailNotifications YES;
-defaults write sogod SOGoSieveScriptsEnabled YES;
-defaults write sogod SOGoSieveServer sieve://${sys_hostname}.${sys_domain}:4190;
-defaults write sogod SOGoVacationEnabled YES;
-defaults write sogod SOGoDraftsFolderName Drafts;
-defaults write sogod SOGoSentFolderName Sent;
-defaults write sogod SOGoTrashFolderName Trash;
-defaults write sogod SOGoIMAPServer ${sys_hostname}.${sys_domain};
-defaults write sogod SOGoSMTPServer 127.0.0.1:588;
-defaults write sogod SOGoMailingMechanism smtp;
-defaults write sogod SOGoMailCustomFromEnabled YES;
-defaults write sogod SOGoPasswordChangeEnabled YES;
-defaults write sogod SOGoAppointmentSendEMailNotifications YES;
-defaults write sogod SOGoACLsSendEMailNotifications YES;
-defaults write sogod SOGoFoldersSendEMailNotifications YES;
-defaults write sogod SOGoLanguage English;
-defaults write sogod SOGoMemcachedHost '/var/run/memcached.sock';
-defaults write sogod SOGoMaximumPingInterval 300;
-defaults write sogod SOGoMaximumSyncInterval 3;
-defaults write sogod SOGoInternalSyncInterval 3;
-"
+			defaults -u sogo write sogod SOGoUserSources "({type = sql;id = directory;viewURL = mysql://${my_mailcowuser}:${my_mailcowpass}@${my_dbhost}:3306/${my_mailcowdb}/sogo_view;canAuthenticate = YES;isAddressBook = YES;displayName = \"Global Address Book\";userPasswordAlgorithm = ssha256;})"
+			defaults -u sogo write sogod SOGoProfileURL "mysql://${my_mailcowuser}:${my_mailcowpass}@${my_dbhost}:3306/${my_mailcowdb}/sogo_user_profile"
+			defaults -u sogo write sogod OCSFolderInfoURL "mysql://${my_mailcowuser}:${my_mailcowpass}@${my_dbhost}:3306/${my_mailcowdb}/sogo_folder_info"
+			defaults -u sogo write sogod OCSSessionsFolderURL "mysql://${my_mailcowuser}:${my_mailcowpass}@${my_dbhost}:3306/${my_mailcowdb}/sogo_sessions_folder"
+			defaults -u sogo write sogod SOGoPageTitle "${sys_hostname}.${sys_domain}";
+			defaults -u sogo write sogod SOGoForwardEnabled YES;
+			defaults -u sogo write sogod SOGoMailAuxiliaryUserAccountsEnabled YES;
+			defaults -u sogo write sogod SOGoTimeZone "${sys_timezone}";
+			defaults -u sogo write sogod SOGoMailDomain "${sys_domain}";
+			defaults -u sogo write sogod SOGoAppointmentSendEMailNotifications YES;
+			defaults -u sogo write sogod SOGoSieveScriptsEnabled YES;
+			defaults -u sogo write sogod SOGoSieveServer "sieve://${sys_hostname}.${sys_domain}:4190";
+			defaults -u sogo write sogod SOGoVacationEnabled YES;
+			defaults -u sogo write sogod SOGoDraftsFolderName Drafts;
+			defaults -u sogo write sogod SOGoSentFolderName Sent;
+			defaults -u sogo write sogod SOGoTrashFolderName Trash;
+			defaults -u sogo write sogod SOGoIMAPServer "${sys_hostname}.${sys_domain}";
+			defaults -u sogo write sogod SOGoSMTPServer 127.0.0.1:588;
+			defaults -u sogo write sogod SOGoMailingMechanism smtp;
+			defaults -u sogo write sogod SOGoMailCustomFromEnabled YES;
+			defaults -u sogo write sogod SOGoPasswordChangeEnabled YES;
+			defaults -u sogo write sogod SOGoAppointmentSendEMailNotifications YES;
+			defaults -u sogo write sogod SOGoACLsSendEMailNotifications YES;
+			defaults -u sogo write sogod SOGoFoldersSendEMailNotifications YES;
+			defaults -u sogo write sogod SOGoLanguage English;
+			defaults -u sogo write sogod SOGoMemcachedHost "/var/run/memcached.sock";
+			defaults -u sogo write sogod SOGoMaximumPingInterval 300;
+			defaults -u sogo write sogod SOGoMaximumSyncInterval 3;
+			defaults -u sogo write sogod SOGoInternalSyncInterval 3;
 			# ~1 for 10 users, more when AS is enabled
 			sed -i '/PREFORK/c\PREFORK=15' /etc/default/sogo
 			;;
