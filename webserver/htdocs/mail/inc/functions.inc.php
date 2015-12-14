@@ -1571,7 +1571,6 @@ function set_time_limited_aliases($link, $postarray) {
 }
 function set_user_account($link, $postarray) {
 	$name_now = mysqli_real_escape_string($link, $postarray['user_now']);
-	$user_real_name = mysqli_real_escape_string($link, $postarray['user_real_name']);
 	$password_old = mysqli_real_escape_string($link, $postarray['user_old_pass']);
 	$password_new = mysqli_real_escape_string($link, $postarray['user_new_pass']);
 	$password_new2 = mysqli_real_escape_string($link, $postarray['user_new_pass2']);
@@ -1619,21 +1618,17 @@ function set_user_account($link, $postarray) {
 		while ($link->next_result()) {
 			if (!$link->more_results()) break;
 		}
+		$_SESSION['return'] = array(
+			'type' => 'success',
+			'msg' => 'Changes saved successfully'
+		)
 	}
-	if (!empty($user_real_name)) {
-		$mystring = "UPDATE mailbox SET modified=NOW(), name='".$user_real_name."' WHERE username='".$name_now."'";
-		if (!mysqli_query($link, $mystring)) {
-			$_SESSION['return'] = array(
-				'type' => 'danger',
-				'msg' => 'MySQL Error: '.mysqli_error($link)
-			);
-			return false;
-		}
+	else {
+		$_SESSION['return'] = array(
+			'type' => 'info',
+			'msg' => 'No changes to commit'
+		);
 	}
-	$_SESSION['return'] = array(
-		'type' => 'success',
-		'msg' => 'Changes saved successfully'
-	);
 }
 function set_fetch_mail($link, $postarray) {
 	global $logged_in_as;

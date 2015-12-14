@@ -12,12 +12,6 @@ $user_details = mysqli_query($link, "SELECT name, username FROM mailbox WHERE us
 <div class="panel-body">
 <form class="form-horizontal" role="form" method="post">
 	<input type="hidden" name="user_now" value="<?=$logged_in_as;?>">
-	<div class="form-group">
-		<label class="control-label col-sm-3" for="user_old_pass">Display name:</label>
-		<div class="col-sm-5">
-		<input type="text" class="form-control" name="user_real_name" id="user_real_name" value="<?=htmlspecialchars(mysqli_fetch_assoc($user_details)['name']);?>" required>
-		</div>
-	</div>
 	<hr>
 	<div class="form-group">
 		<label class="control-label col-sm-3" for="user_old_pass">Current password:</label>
