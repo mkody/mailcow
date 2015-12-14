@@ -80,21 +80,6 @@ function return_mailcow_config($s) {
 			$state = file_get_contents($GLOBALS["MC_ANON_HEADERS"]);
 			if (!empty($state)) { return "checked"; } else { return false; }
 			break;
-		case "public_folder_status":
-			$state = file_get_contents($GLOBALS["MC_PUB_FOLDER"]);
-			if (!empty($state)) { return "checked"; } else { return false; }
-			break;
-		case "public_folder_name":
-			$state = file_get_contents($GLOBALS["MC_PUB_FOLDER"]);
-			if (!empty($state)) { return explode(";;", $state)[1]; } else { return false; }
-			break;
-		case "public_folder_pvt":
-			$state = file_get_contents($GLOBALS["MC_PUB_FOLDER"]);
-			if (!empty($state)) {
-				$PVT = explode(";;", $state)[3];
-				if ($PVT == "on") { return "checked"; } else { return false; }
-			}
-			break;
 		case "srr":
 			return shell_exec("sudo /usr/local/sbin/mc_pfset get-srr");
 			break;
@@ -178,40 +163,6 @@ function set_mailcow_config($s, $v = '') {
 				file_put_contents($GLOBALS["MC_ANON_HEADERS"], $template);
 			} else {
 				file_put_contents($GLOBALS["MC_ANON_HEADERS"], "");
-			}
-			break;
-		case "public_folder":
-			if (!ctype_alnum(str_replace("/", "", $v['public_folder_name'])))
-			{
-				$_SESSION['return'] = array(
-					'type' => 'danger',
-					'msg' => 'Public folder name must not be empty'
-				);
-				break;
-			}
-			if (isset($v['public_folder_pvt']) && $v['public_folder_pvt'] == "on") {
-				$PVT = ':INDEXPVT=~/public';
-			}
-			else {
-				$PVT = '';
-			}
-			$template = '# ;;'.$v['public_folder_name'].';;
-# ;;'.$v['public_folder_pvt'].';;
-namespace {
-  type = public
-  separator = /
-  prefix = Public/
-  location = maildir:/var/vmail/public'.$PVT.'
-  subscriptions = no
-  mailbox '.$v['public_folder_name'].' {
-    auto = subscribe
-  }
-}';
-			if (isset($v['use_public_folder']) && $v['use_public_folder'] == "on")	{
-				file_put_contents($GLOBALS["MC_PUB_FOLDER"], $template);
-			}
-			else {
-				file_put_contents($GLOBALS["MC_PUB_FOLDER"], "");
 			}
 			break;
 		case "srr":

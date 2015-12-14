@@ -261,45 +261,6 @@ $srr_values = return_mailcow_config("srr");
 
 
 <div class="panel panel-default">
-<div class="panel-heading" data-toggle="collapse" data-parent="#accordion_config" data-target="#collapsePubFolders"><a style="cursor:pointer;" class="accordion-toggle">Public folders</a></div>
-<div id="collapsePubFolders" class="panel-collapse collapse">
-<div class="panel-body">
-<p>A namespace "Public" is created. Belows public folder name indicates the name of the first auto-created mailbox within this namespace.</p>
-<form class="form-horizontal" role="form" method="post">
-	<div class="form-group">
-		<label class="control-label col-sm-4" for="location">Folder name <small>(alphanumeric)</small>:</label>
-		<div class="col-sm-8">
-		<input type="text" class="form-control" name="public_folder_name" id="public_folder_name" value="<?=return_mailcow_config("public_folder_name");?>">
-		</div>
-	</div>
-	<div class="form-group">
-		<div class="col-sm-offset-4 col-sm-8">
-			<div class="checkbox">
-			<label><input type="checkbox" name="use_public_folder" <?=return_mailcow_config("public_folder_status");?>> Enable public folder</label>
-			</div>
-			<small>Toggling this option does not delete mail in any public folder.</small>
-		</div>
-	</div>
-	<div class="form-group">
-		<div class="col-sm-offset-4 col-sm-8">
-			<div class="checkbox">
-			<label><input type="checkbox" name="public_folder_pvt" <?=return_mailcow_config("public_folder_pvt");?>> Enable per-user seen flag</label>
-			</div>
-			<small>A "per-user seen flag"-enabled system will not mark a mail as read for User B, when User A has seen it, but User B did not.</small>
-		</div>
-	</div>
-	<div class="form-group">
-	<input type="hidden" name="trigger_public_folder">
-		<div class="col-sm-8">
-			<button type="submit" class="btn btn-default">Save changes</button>
-		</div>
-	</div>
-</form>
-</div>
-</div>
-</div>
-
-<div class="panel panel-default">
 <div class="panel-heading" data-toggle="collapse" data-parent="#accordion_config" data-target="#collapsePrivacy"><a style="cursor:pointer;" class="accordion-toggle">Privacy</a></div>
 <div id="collapsePrivacy" class="panel-collapse collapse">
 <div class="panel-body">
