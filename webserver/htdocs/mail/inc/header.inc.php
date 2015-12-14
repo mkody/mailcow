@@ -70,7 +70,7 @@ endif;
 <?php
 if ($GLOBALS['SOGO_VARIANT'] == "yes"):
 ?>
-				<li><a href="/SOGo">SOGo Login</a></li>
+				<li><a href="/SOGo"><span style="color:#64C138;font-weight:bold">SOGo Login</span></a></li>
 <?php
 else:
 ?>
