@@ -1621,7 +1621,7 @@ function set_user_account($link, $postarray) {
 		$_SESSION['return'] = array(
 			'type' => 'success',
 			'msg' => 'Changes saved successfully'
-		)
+		);
 	}
 	else {
 		$_SESSION['return'] = array(
