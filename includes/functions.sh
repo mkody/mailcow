@@ -230,7 +230,7 @@ DEBIAN_FRONTEND=noninteractive apt-get --force-yes -y install dovecot-common dov
 				service apache2 stop 2> /dev/null
 				wget https://github.com/letsencrypt/letsencrypt/archive/v${letsencrypt}.tar.gz -O - | tar xfz -
 				./letsencrypt-${letsencrypt}/letsencrypt-auto certonly --standalone -d ${sys_hostname}.${sys_domain} -d autodiscover.${sys_domain}
-				echo "$(textb [INFO]) - Searching
+				echo "$(textb [INFO]) - Searching"
 				if [[ -d /etc/letsencrypt/live ]]; then
 					for i in $(ls /etc/letsencrypt/live); do
 						if [[ ! -z $(openssl x509 -in "/etc/letsencrypt/live/$i/fullchain.pem" -text -noout | \
@@ -244,15 +244,9 @@ DEBIAN_FRONTEND=noninteractive apt-get --force-yes -y install dovecot-common dov
 						LETS_FAILED="1"
 						echo "$(yellowb [WARN]) - Cannot find a proper certificate path, falling back to self-signed..."
 					else
-						enddate=$(openssl x509 -in "${LE_CERT_PATH}/fullchain.pem" -noout -enddate | awk -F= ' /notAfter/ { printf("%s\n",$NF); } ')
-						if [[ $(date --date="${enddate}" +%s) - $(date +%s) | bc) !> 0 ]]; then
-							ln -s ${LE_CERT_PATH}/fullchain.pem /etc/ssl/mail/mail.crt
-							ln -s ${LE_CERT_PATH}/privkey.pem /etc/ssl/mail/mail.key
-							echo "$(textb [INFO]) - Found useable certificates"
-						else
-							LETS_FAILED="1"
-							echo "$(yellowb [WARN]) - Certificates expired, falling back to self-signed..."
-						fi
+						ln -s ${LE_CERT_PATH}/fullchain.pem /etc/ssl/mail/mail.crt
+						ln -s ${LE_CERT_PATH}/privkey.pem /etc/ssl/mail/mail.key
+						echo "$(textb [INFO]) - Found useable certificates"
 					fi
 				else
 					LETS_FAILED="1"

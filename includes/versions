@@ -1,4 +1,4 @@
 fail2ban_version="0.9.3"
 fuglu_version="0.6.5"
 mailcow_version="0.14"
-letsencrypt="0.1.0"
+letsencrypt="0.1.1"
