@@ -29,7 +29,6 @@ if [[ ${is_upgradetask} == "yes" ]]; then
 echo --------------------------------- >> installer.log
 echo UPGRADE to ${mailcow_version} on $(date) >> installer.log
 echo --------------------------------- >> installer.log
-echo Fail2ban version: ${fail2ban_version} >> installer.log
 echo FuGlu version: ${fuglu_version} >> installer.log
 echo --------------------------------- >> installer.log
 	exit 0
@@ -70,7 +69,6 @@ echo --------------------------------- >> installer.log
 echo Web root: https://${sys_hostname}.${sys_domain} >> installer.log
 echo Autodiscover: https://autodiscover.${sys_domain} >> installer.log
 echo --------------------------------- >> installer.log
-echo Fail2ban version: $fail2ban_version >> installer.log
 echo FuGlu version: ${fuglu_version} >> installer.log
 echo mailcow version: ${mailcow_version} >> installer.log
 echo --------------------------------- >> installer.log
@@ -106,13 +104,7 @@ installtask webserver
 returnwait "Webserver configuration" "SOGo configuration"
 
 installtask sogo
-returnwait "SOGo configuration" "Rsyslogd configuration"
-
-installtask rsyslogd
-returnwait "Rsyslogd configuration" "Fail2ban configuration"
-
-installtask fail2ban
-returnwait "Fail2ban configuration" "OpenDKIM configuration"
+returnwait "SOGo configuration" "OpenDKIM configuration"
 
 installtask opendkim
 returnwait "OpenDKIM configuration" "Restarting services"

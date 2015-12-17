@@ -30,8 +30,8 @@ SOGo is used as groupware backend in mailcow (SOGo edition).
     * Apache or Nginx (+PHP5-FPM)
 * SQL database backend, remote database support
     * MySQL or MariaDB
-* Fail2ban brute force protection
-* **mailcow web UI**: Add domains, mailboxes, aliases, set limits, monitor mail statistics, change mail server settings, create/delete DKIM records and more...
+* **mailcow web UI**
+    * Add domains, mailboxes, aliases, set limits, monitor mail statistics, change mail server settings, create/delete DKIM records and more...
 * Postscreen activated and configured
 * STARTTLS and SMTPS support
 * The default restrictions used are a good compromise between blocking spam and avoiding false-positives
