@@ -230,7 +230,7 @@ DEBIAN_FRONTEND=noninteractive apt-get --force-yes -y install dovecot-common dov
 				service apache2 stop 2> /dev/null
 				wget https://github.com/letsencrypt/letsencrypt/archive/v${letsencrypt}.tar.gz -O - | tar xfz -
 				./letsencrypt-${letsencrypt}/letsencrypt-auto certonly --standalone -d ${sys_hostname}.${sys_domain} -d autodiscover.${sys_domain}
-				echo "$(textb [INFO]) - Searching"
+				echo "$(textb [INFO]) - Searching for useable certificate..."
 				if [[ -d /etc/letsencrypt/live ]]; then
 					for i in $(ls /etc/letsencrypt/live); do
 						if [[ ! -z $(openssl x509 -in "/etc/letsencrypt/live/$i/fullchain.pem" -text -noout | \

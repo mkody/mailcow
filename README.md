@@ -11,11 +11,10 @@
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-mailcow (SOGo edition, nightly)
+mailcow (SOGo edition)
 =====
 
-mailcow is a mail server suite based on Dovecot, Postfix and other open source software, that provides a modern Web UI for administration.
-In future versions mailcow will provide Cal- and CardDAV support.
+mailcow (SOGo edition) is a mail server suite based on Dovecot, Postfix and other open source software, that provides a modern web UI for user/server administration and SOGo to fulfill the definition of a groupware.
 
 mailcow supports **Debian stable (8.x)**
 
