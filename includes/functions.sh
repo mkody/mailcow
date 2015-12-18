@@ -142,6 +142,7 @@ installtask() {
 				exit 1
 			fi
 			mkdir -p /var/mailcow/log;
+			echo "${sys_hostname}.${sys_domain}" > /etc/mailname
 			;;
 		installpackages)
 			echo "$(textb [INFO]) - Installing prerequisites..."
