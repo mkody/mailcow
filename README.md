@@ -16,7 +16,7 @@ mailcow (SOGo edition)
 
 mailcow (SOGo edition) is a mail server suite based on Dovecot, Postfix and other open source software, that provides a modern web UI for user/server administration and SOGo to fulfill the definition of a groupware.
 
-mailcow supports **Debian stable (8.x)**
+mailcow supports **Debian Jessie (stable, 8.x)** and **Ubuntu 14.04 LTS**
 
 # Introduction
 

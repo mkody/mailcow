@@ -143,37 +143,41 @@ installtask() {
 			fi
 			mkdir -p /var/mailcow/log;
 			echo "${sys_hostname}.${sys_domain}" > /etc/mailname
-			;;
-		installpackages)
 			echo "$(textb [INFO]) - Installing prerequisites..."
 			apt-get -y update > /dev/null ; apt-get -y install lsb-release whiptail apt-utils ssl-cert > /dev/null 2>&1
-        		dist_codename=$(lsb_release -cs)
+			dist_codename=$(lsb_release -cs)
 			dist_id=$(lsb_release -is)
+			;;
+		installpackages)
 			if [[ $dist_id == "Debian" ]]; then
-				apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 7638D0442B90D010 > /dev/null 2>&1
-				apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 8B48AD6246925553 > /dev/null 2>&1
-			fi
-			/usr/sbin/make-ssl-cert generate-default-snakeoil --force-overwrite
-			# Detect and edit repos
-			if [[ $dist_codename == "trusty" ]]; then
-				echo "$(textb [INFO]) - Adding ondrej/apache2 repository..."
-				echo "deb http://ppa.launchpad.net/ondrej/apache2/ubuntu trusty main" > /etc/apt/sources.list.d/ondrej.list
-				apt-key adv --keyserver keyserver.ubuntu.com --recv E5267A6C > /dev/null 2>&1
-				echo "$(textb [INFO]) - Adding official SOGo repository..."
-				echo "deb http://inverse.ca/ubuntu trusty trusty" > /etc/apt/sources.list.d/sogo.list
-				apt-key adv --keyserver keys.gnupg.net --recv-key 0x810273C4 > /dev/null 2>&1
-				apt-get -y update >/dev/null
-			elif [[ $dist_codename == "jessie" ]]; then
-				echo "$(textb [INFO]) - Adding official SOGo repository..."
-				echo "deb http://inverse.ca/debian jessie jessie" > /etc/apt/sources.list.d/sogo.list
-				apt-key adv --keyserver keys.gnupg.net --recv-key 0x810273C4 > /dev/null 2>&1
-				apt-get -y update >/dev/null
-			fi
-			echo "$(textb [INFO]) - Installing packages unattended, please stand by, errors will be reported."
-			if [[ $(lsb_release -is) == "Ubuntu" ]]; then
+				if [[ $dist_codename == "jessie" ]]; then
+					echo "$(textb [INFO]) - Adding official SOGo repository..."
+					echo "deb http://inverse.ca/debian jessie jessie" > /etc/apt/sources.list.d/sogo.list
+					apt-key adv --keyserver keys.gnupg.net --recv-key 0x810273C4 > /dev/null 2>&1
+					apt-get -y update >/dev/null
+					jetty_name="jetty8"
+	                        else
+					echo "$(redb [ERR]) - Your Debian distribution is currently not supported"
+					exit 1
+				fi
+			elif [[ $dist_id == "Ubuntu" ]]; then
+				if [[ $dist_codename == "trusty" ]]; then
+					echo "$(textb [INFO]) - Adding ondrej/apache2 repository..."
+					echo "deb http://ppa.launchpad.net/ondrej/apache2/ubuntu trusty main" > /etc/apt/sources.list.d/ondrej.list
+					apt-key adv --keyserver keyserver.ubuntu.com --recv E5267A6C > /dev/null 2>&1
+					echo "$(textb [INFO]) - Adding official SOGo repository..."
+					echo "deb http://inverse.ca/ubuntu trusty trusty" > /etc/apt/sources.list.d/sogo.list
+					apt-key adv --keyserver keys.gnupg.net --recv-key 0x810273C4 > /dev/null 2>&1
+					apt-get -y update >/dev/null
+					jetty_name="jetty"
+				else
+					echo "$(redb [ERR]) - Your Ubuntu distribution is currently not supported"
+					exit 1
+				fi
 				echo "$(yellowb [WARN]) - You are running Ubuntu. The installation will not fail, though you may see a lot of output until the installation is finished."
 			fi
-			apt-get -y update >/dev/null
+			/usr/sbin/make-ssl-cert generate-default-snakeoil --force-overwrite
+			echo "$(textb [INFO]) - Installing packages unattended, please stand by, errors will be reported."
 			if [[ ${my_dbhost} == "localhost" || ${my_dbhost} == "127.0.0.1" ]] && [[ $is_upgradetask != "yes" ]]; then
 				if [[ $my_usemariadb == "yes" ]]; then
 					database_backend="mariadb-client mariadb-server"
@@ -201,13 +205,7 @@ solr-jetty apache2 apache2-utils libapache2-mod-php5 sogo sogo-activesync libwbx
 			cp /etc/ssl/private/ssl-cert-snakeoil.key /etc/dovecot/dovecot.key
 			cp /etc/ssl/certs/ssl-cert-snakeoil.pem /etc/dovecot/private/dovecot.pem
 			cp /etc/ssl/private/ssl-cert-snakeoil.key /etc/dovecot/private/dovecot.key
-			if [[ ! -z $(grep wheezy-backports /etc/apt/sources.list) ]]; then
-				echo "$(textb [INFO]) - Installing Dovecot from wheezy-backports..."
-DEBIAN_FRONTEND=noninteractive apt-get --force-yes -y install dovecot-common dovecot-core dovecot-imapd dovecot-lmtpd dovecot-managesieved dovecot-sieve dovecot-mysql dovecot-pop3d dovecot-solr -t wheezy-backports >/dev/null
-			else
 DEBIAN_FRONTEND=noninteractive apt-get --force-yes -y install dovecot-common dovecot-core dovecot-imapd dovecot-lmtpd dovecot-managesieved dovecot-sieve dovecot-mysql dovecot-pop3d dovecot-solr >/dev/null
-			fi
-			# Installing mailcow binaries
 			install -m 755 misc/mc_clean_spam_aliases /etc/cron.daily/mc_clean_spam_aliases
 			install -m 755 misc/mc_pfset /usr/local/sbin/mc_pfset
 			install -m 755 misc/mc_pflog_renew /usr/local/sbin/mc_pflog_renew
@@ -406,9 +404,9 @@ DEBIAN_FRONTEND=noninteractive apt-get --force-yes -y install dovecot-common dov
 			update-rc.d -f solr remove > /dev/null 2>&1
 			service solr stop > /dev/null 2>&1
 			cp /usr/share/dovecot/solr-schema.xml /etc/solr/conf/schema.xml
-			sed -i '/NO_START/c\NO_START=0' /etc/default/jetty8
-                        sed -i '/JETTY_HOST/c\JETTY_HOST=127.0.0.1' /etc/default/jetty8
-			sed -i '/JETTY_PORT/c\JETTY_PORT=8983' /etc/default/jetty8
+			sed -i '/NO_START/c\NO_START=0' /etc/default/${jetty_name}
+                        sed -i '/JETTY_HOST/c\JETTY_HOST=127.0.0.1' /etc/default/${jetty_name}
+			sed -i '/JETTY_PORT/c\JETTY_PORT=8983' /etc/default/${jetty_name}
 			;;
 		clamav)
 			usermod -a -G vmail clamav 2> /dev/null
@@ -534,7 +532,7 @@ DatabaseMirror clamav.inode.at" >> /etc/clamav/freshclam.conf
 			;;
 		restartservices)
 			[[ -f /lib/systemd/systemd ]] && echo "$(textb [INFO]) - Restarting services, this may take a few seconds..."
-			for var in jetty8 apache2 spamassassin fuglu dovecot postfix opendkim clamav-daemon sogo
+			for var in ${jetty_name} apache2 spamassassin fuglu dovecot postfix opendkim clamav-daemon sogo
 			do
 				service $var stop
 				sleep 1.5
