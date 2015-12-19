@@ -223,12 +223,12 @@ DEBIAN_FRONTEND=noninteractive apt-get --force-yes -y install dovecot-common dov
 				echo "$(textb [INFO]) - Requesting certificates from Let's Encrypt..."
 				service apache2 stop 2> /dev/null
 				wget https://github.com/letsencrypt/letsencrypt/archive/v${letsencrypt}.tar.gz -O - | tar xfz -
-				./letsencrypt-${letsencrypt}/letsencrypt-auto certonly --standalone -d ${sys_hostname}.${sys_domain} -d autodiscover.${sys_domain}
+				./letsencrypt-${letsencrypt}/letsencrypt-auto certonly --standalone -d ${sys_hostname}.${sys_domain} #-d autodiscover
 				echo "$(textb [INFO]) - Searching for useable certificate..."
 				if [[ -d /etc/letsencrypt/live ]]; then
 					for i in $(ls /etc/letsencrypt/live); do
 						if [[ ! -z $(openssl x509 -in "/etc/letsencrypt/live/$i/fullchain.pem" -text -noout | \
-							grep -E "DNS:autodiscover.${sys_domain}" | \
+							#grep -E "DNS:autodiscover.${sys_domain}" | \
 							grep -E "DNS:${sys_hostname}.${sys_domain}") ]]; then
 									LE_CERT_PATH="/etc/letsencrypt/live/$i"
 									break
@@ -249,7 +249,7 @@ DEBIAN_FRONTEND=noninteractive apt-get --force-yes -y install dovecot-common dov
 				rm -r letsencrypt-${letsencrypt}
 			fi
 			if [[ ${LETS_FAILED} == "1" ]] || [[ ${httpd_lets_encrypt} != "yes" ]]; then
-				openssl req -new -newkey rsa:4096 -sha256 -days 1095 -nodes -x509 -subj "/C=ZZ/ST=mailcow/L=mailcow/O=mailcow/CN=${sys_hostname}.${sys_domain}/subjectAltName=DNS.1=${sys_hostname}.${sys_domain},DNS.2=autodiscover.{sys_domain}" -keyout /etc/ssl/mail/mail.key -out /etc/ssl/mail/mail.crt
+				openssl req -new -newkey rsa:4096 -sha256 -days 1095 -nodes -x509 -subj "/C=ZZ/ST=mailcow/L=mailcow/O=mailcow/CN=${sys_hostname}.${sys_domain}/subjectAltName=DNS.1=${sys_hostname}.${sys_domain}" -keyout /etc/ssl/mail/mail.key -out /etc/ssl/mail/mail.crt
 				chmod 600 /etc/ssl/mail/mail.key
 				cp /etc/ssl/mail/mail.crt /usr/local/share/ca-certificates/
 				update-ca-certificates

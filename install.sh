@@ -67,7 +67,6 @@ echo FQDN: ${sys_hostname}.${sys_domain} >> installer.log
 echo Timezone: ${sys_timezone} >> installer.log
 echo --------------------------------- >> installer.log
 echo Web root: https://${sys_hostname}.${sys_domain} >> installer.log
-echo Autodiscover: https://autodiscover.${sys_domain} >> installer.log
 echo --------------------------------- >> installer.log
 echo FuGlu version: ${fuglu_version} >> installer.log
 echo mailcow version: ${mailcow_version} >> installer.log
