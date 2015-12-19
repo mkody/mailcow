@@ -534,7 +534,7 @@ DatabaseMirror clamav.inode.at" >> /etc/clamav/freshclam.conf
 			;;
 		restartservices)
 			[[ -f /lib/systemd/systemd ]] && echo "$(textb [INFO]) - Restarting services, this may take a few seconds..."
-			for var in ${jetty_name} apache2 spamassassin fuglu dovecot postfix opendkim clamav-daemon sogo
+			for var in ${jetty_name} apache2 spamassassin fuglu dovecot postfix opendkim clamav-daemon sogo mailgraph
 			do
 				service $var stop
 				sleep 1.5
@@ -605,7 +605,7 @@ A backup will be stored in ./before_upgrade_$timestamp
 	cp -R /etc/{postfix,dovecot,spamassassin,apache2,fuglu,mysql,php5,clamav} before_upgrade_$timestamp/
 	echo -e "$(greenb "[OK]")"
 	echo -en "\nStopping services, this may take a few seconds... \t\t"
-	for var in apache2 spamassassin fuglu dovecot postfix opendkim clamav-daemon stop
+	for var in apache2 spamassassin fuglu dovecot postfix opendkim clamav-daemon mailgraph
 	do
 		service $var stop > /dev/null 2>&1
 	done
