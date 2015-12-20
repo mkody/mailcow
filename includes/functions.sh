@@ -531,6 +531,8 @@ DatabaseMirror clamav.inode.at" >> /etc/clamav/freshclam.conf
 			defaults write sogod SOGoInternalSyncInterval 3;"
 			# ~1 for 10 users, more when AS is enabled
 			sed -i '/PREFORK/c\PREFORK=15' /etc/default/sogo
+			sed -i '/expire-autoreply/s/^#//g' /etc/cron.d/sogo
+			sed -i '/expire-sessions/s/^#//g' /etc/cron.d/sogo
 			;;
 		restartservices)
 			[[ -f /lib/systemd/systemd ]] && echo "$(textb [INFO]) - Restarting services, this may take a few seconds..."
