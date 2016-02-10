@@ -145,7 +145,7 @@ installtask() {
 			if [[ $dist_id == "Debian" ]]; then
 				if [[ $dist_codename == "jessie" ]]; then
 					echo "$(textb [INFO]) - Adding official SOGo repository..."
-					echo "deb http://inverse.ca/debian jessie jessie" > /etc/apt/sources.list.d/sogo.list
+					echo "deb http://inverse.ca/debian-v3 jessie jessie" > /etc/apt/sources.list.d/sogo.list
 					apt-key adv --keyserver keys.gnupg.net --recv-key 0x810273C4 > /dev/null 2>&1
 					apt-get -y update >/dev/null
 	                        else
@@ -158,7 +158,7 @@ installtask() {
 					echo "deb http://ppa.launchpad.net/ondrej/apache2/ubuntu trusty main" > /etc/apt/sources.list.d/ondrej.list
 					apt-key adv --keyserver keyserver.ubuntu.com --recv E5267A6C > /dev/null 2>&1
 					echo "$(textb [INFO]) - Adding official SOGo repository..."
-					echo "deb http://inverse.ca/ubuntu trusty trusty" > /etc/apt/sources.list.d/sogo.list
+					echo "deb http://inverse.ca/ubuntu-v3 trusty trusty" > /etc/apt/sources.list.d/sogo.list
 					apt-key adv --keyserver keys.gnupg.net --recv-key 0x810273C4 > /dev/null 2>&1
 					apt-get -y update >/dev/null
 				else
