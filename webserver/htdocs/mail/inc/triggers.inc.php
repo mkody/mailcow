@@ -23,7 +23,7 @@ if (isset($_POST["login_user"]) && isset($_POST["pass_user"])) {
 	else {
 		$_SESSION['return'] = array(
 			'type' => 'danger',
-			'msg' => sprintf($lang['login']['login_failed']);
+			'msg' => sprintf($lang['login']['login_failed'])
 		);
 		return false;
 	}
