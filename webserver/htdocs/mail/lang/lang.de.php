@@ -129,7 +129,7 @@ $lang['start']['hostname'] = 'Hostname';
 $lang['start']['port'] = 'Port';
 $lang['start']['cal_carddav'] = 'Cal- und CardDAV';
 $lang['start']['cal_carddav_badge'] = 'Kalender, Aufgaben, Adressbuch';
-$lang['start']['cal_carddav_description'] = 'Für eine optimale Verbindung empfehlen wir die Verwendung des <b>Mozilla Thunderbirds</b> zusammen mit der Erweiterung <a target="_blank" href="%s"><b>SOGo-Connector</b></a><br />Nach dem Herunterladen der Erweiterung starten Sie Thunderbird, öffnen das Fenster für Erweiterungen und ziehen die heruntergeladene Datei in das offene Fenster. Entnehmen Sie die Cal- und CardDAV-Links bitte den Eigenschaften des Kalenders oder Adressbuches in SOGo:';
+$lang['start']['cal_carddav_description'] = 'Für eine optimale Verbindung empfehlen wir die Verwendung des <b>Mozilla Thunderbirds</b> zusammen mit der Erweiterung <b>SOGo-Connector</b>><br />Nach dem Herunterladen der Erweiterung starten Sie Thunderbird, öffnen das Fenster für Erweiterungen und ziehen die heruntergeladene Datei in das offene Fenster. Entnehmen Sie die Cal- und CardDAV-Links bitte den Eigenschaften des Kalenders oder Adressbuches in SOGo:';
 $lang['start']['as_config'] = 'Konfiguration mit Microsoft ActiveSync ©';
 $lang['start']['ms_as'] = 'Microsoft ActiveSync © Server';
 $lang['start']['ms_as_badge'] = 'E-Mail, Kalender, Aufgaben, Adressbuch';

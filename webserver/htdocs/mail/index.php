@@ -94,7 +94,7 @@ $_SESSION['return_to'] = $_SERVER['REQUEST_URI'];
 			<div class="panel panel-default">
 				<div class="panel-heading"><span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span> Cal- und CardDAV <span class="badge pull-right"><?=$lang['start']['cal_carddav_badge'];?></span></div>
 				<div class="panel-body">
-					<p><?=sprintf($lang['start']['cal_carddav_description'], $_SESSION['SOGO_EXTENSION_LATEST'], $_SERVER['SERVER_NAME']);?></p>
+					<p><?=sprintf($lang['start']['cal_carddav_description'], $_SERVER['SERVER_NAME']);?></p>
 				</div>
 			</div>
 		</div>

@@ -175,7 +175,7 @@ installtask() {
 				database_backend=""
 			fi
 DEBIAN_FRONTEND=noninteractive apt-get --force-yes -y install zip dnsutils python-setuptools libmail-spf-perl libmail-dkim-perl file \
-openssl php5-mcrypt php5-mysql ${database_backend} mailutils pyzor razor postfix postfix-mysql postfix-pcre pflogsumm spamassassin spamc sudo bzip2 curl mpack opendkim opendkim-tools unzip clamav-daemon \
+openssl php5-intl php5-mcrypt php5-mysql ${database_backend} mailutils pyzor razor postfix postfix-mysql postfix-pcre pflogsumm spamassassin spamc sudo bzip2 curl mpack opendkim opendkim-tools unzip clamav-daemon \
 python-magic unrar-free liblockfile-simple-perl libdbi-perl libmime-base64-urlsafe-perl libtest-tempdir-perl liblogger-syslog-perl bsd-mailx \
 openjdk-7-jre-headless libcurl4-openssl-dev libexpat1-dev rrdtool mailgraph fcgiwrap spawn-fcgi \
 solr-jetty apache2 apache2-utils libapache2-mod-php5 sogo sogo-activesync libwbxml2-0 memcached > /dev/null

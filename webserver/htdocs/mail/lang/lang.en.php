@@ -125,7 +125,7 @@ $lang['start']['hostname'] = 'Hostname';
 $lang['start']['port'] = 'Port';
 $lang['start']['cal_carddav'] = 'Cal-/CardDAV';
 $lang['start']['cal_carddav_badge'] = 'Calendars, tasks and address books';
-$lang['start']['cal_carddav_description'] = 'For the best experience we recommend to use <b>Mozilla Thunderbird</b> + <a target="_blank" href="%s"><b>SOGo connector</b></a> extension.<br />Start Thunderbird, open the add-on settings and drop the newly downloaded xpi file into the opened window. Please find the Cal-/CardDAV links in the properties of a calendar or address book in SOGo:';
+$lang['start']['cal_carddav_description'] = 'For the best experience we recommend to use <b>Mozilla Thunderbird</b> + <b>SOGo connector</b> extension.<br />Start Thunderbird, open the add-on settings and drop the newly downloaded xpi file into the opened window. Please find the Cal-/CardDAV links in the properties of a calendar or address book in SOGo:';
 $lang['start']['as_config'] = 'Configuration using Microsoft ActiveSync ©';
 $lang['start']['ms_as'] = 'Microsoft ActiveSync © server';
 $lang['start']['ms_as_badge'] = 'Emails, calendars, tasks, address books';
