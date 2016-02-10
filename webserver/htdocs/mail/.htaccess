@@ -4,9 +4,6 @@ RewriteRule ^manager mailbox.php
 RewriteRule ^user user.php
 RewriteRule ^admin admin.php
 RewriteRule ^login admin.php
-RewriteRule ^register register.php
 RewriteRule ^add/(domain|mailbox|aliasdomain|domainadmin|alias) add.php?$1
 RewriteRule ^edit/(domain|mailbox|aliasdomain|domainadmin|alias)/(.*) edit.php?$1=$2
 RewriteRule ^delete/(.*)/(.*) delete.php?$1=$2
-RewriteRule ^confirm/([A-Za-z0-9]+) confirm.php?key=$1
-RewriteRule ^reset/([A-Za-z0-9]+) reset.php?key=$1
