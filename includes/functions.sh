@@ -451,6 +451,13 @@ DatabaseMirror clamav.inode.at" >> /etc/clamav/freshclam.conf
 			else
 				echo "$(textb [INFO]) - At least one administrator exists, will not create another mailcow administrator"
 			fi
+			if [[ -z $(grep "/var/www/mail" /etc/apache2/apache2.conf) ]]; then
+			cat >>/etc/apache2/apache2.conf <<EOL
+<Directory "/var/www/mail">
+	AllowOverride All
+</Directory>
+EOL
+			fi
 			;;
 		sogo)
 			if [[ -z $(mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -e "SHOW TABLES LIKE 'sogo_view'" -N -B) ]]; then
