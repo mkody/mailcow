@@ -148,7 +148,6 @@ installtask() {
 					echo "deb http://inverse.ca/debian jessie jessie" > /etc/apt/sources.list.d/sogo.list
 					apt-key adv --keyserver keys.gnupg.net --recv-key 0x810273C4 > /dev/null 2>&1
 					apt-get -y update >/dev/null
-					jetty_name="jetty8"
 	                        else
 					echo "$(redb [ERR]) - Your Debian distribution is currently not supported"
 					exit 1
@@ -162,7 +161,6 @@ installtask() {
 					echo "deb http://inverse.ca/ubuntu trusty trusty" > /etc/apt/sources.list.d/sogo.list
 					apt-key adv --keyserver keys.gnupg.net --recv-key 0x810273C4 > /dev/null 2>&1
 					apt-get -y update >/dev/null
-					jetty_name="jetty"
 				else
 					echo "$(redb [ERR]) - Your Ubuntu distribution is currently not supported"
 					exit 1
@@ -193,11 +191,8 @@ solr-jetty apache2 apache2-utils libapache2-mod-php5 sogo sogo-activesync libwbx
 			cp /etc/ssl/private/ssl-cert-snakeoil.key /etc/dovecot/private/dovecot.key
 DEBIAN_FRONTEND=noninteractive apt-get --force-yes -y install dovecot-common dovecot-core dovecot-imapd dovecot-lmtpd dovecot-managesieved dovecot-sieve dovecot-mysql dovecot-pop3d dovecot-solr >/dev/null
 			install -m 755 misc/mc_clean_spam_aliases /etc/cron.daily/mc_clean_spam_aliases
-			install -m 755 misc/mc_pfset /usr/local/sbin/mc_pfset
 			install -m 755 misc/mc_pflog_renew /usr/local/sbin/mc_pflog_renew
-			install -m 755 misc/mc_msg_size /usr/local/sbin/mc_msg_size
 			install -m 755 misc/mc_dkim_ctrl /usr/local/sbin/mc_dkim_ctrl
-			install -m 755 misc/mc_setup_backup /usr/local/sbin/mc_setup_backup
 			install -m 755 misc/mc_resetadmin /usr/local/sbin/mc_resetadmin
 			;;
 		ssl)
@@ -363,9 +358,9 @@ DEBIAN_FRONTEND=noninteractive apt-get --force-yes -y install dovecot-common dov
 			service solr stop > /dev/null 2>&1
 			[[ -f /usr/share/doc/dovecot-core/dovecot/solr-schema.xml ]] && cp /usr/share/doc/dovecot-core/dovecot/solr-schema.xml /etc/solr/conf/schema.xml
 			[[ -f /usr/share/dovecot/solr-schema.xml ]] && cp /usr/share/dovecot/solr-schema.xml /etc/solr/conf/schema.xml
-			sed -i '/NO_START/c\NO_START=0' /etc/default/${jetty_name}
-                        sed -i '/JETTY_HOST/c\JETTY_HOST=127.0.0.1' /etc/default/${jetty_name}
-			sed -i '/JETTY_PORT/c\JETTY_PORT=8983' /etc/default/${jetty_name}
+			sed -i '/NO_START/c\NO_START=0' /etc/default/jetty*
+                        sed -i '/JETTY_HOST/c\JETTY_HOST=127.0.0.1' /etc/default/jetty*
+			sed -i '/JETTY_PORT/c\JETTY_PORT=8983' /etc/default/jetty*
 			;;
 		clamav)
 			usermod -a -G vmail clamav 2> /dev/null
@@ -504,7 +499,7 @@ DatabaseMirror clamav.inode.at" >> /etc/clamav/freshclam.conf
 			;;
 		restartservices)
 			[[ -f /lib/systemd/systemd ]] && echo "$(textb [INFO]) - Restarting services, this may take a few seconds..."
-			for var in ${jetty_name} apache2 spamassassin fuglu dovecot postfix opendkim clamav-daemon sogo mailgraph
+			for var in jetty* apache2 spamassassin fuglu dovecot postfix opendkim clamav-daemon sogo mailgraph
 			do
 				service $var stop
 				sleep 1.5
