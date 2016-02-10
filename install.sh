@@ -25,9 +25,9 @@ done
 
 if [[ ${is_upgradetask} == "yes" ]]; then
 	upgradetask
-	echo ${mailcow_version} > /etc/mailcow_version
+	echo ${mailcow_sogo_version} > /etc/mailcow_sogo_version
 echo --------------------------------- >> installer.log
-echo UPGRADE to ${mailcow_version} on $(date) >> installer.log
+echo UPGRADE to ${mailcow_sogo_version} on $(date) >> installer.log
 echo --------------------------------- >> installer.log
 echo FuGlu version: ${fuglu_version} >> installer.log
 echo --------------------------------- >> installer.log
@@ -69,7 +69,7 @@ echo --------------------------------- >> installer.log
 echo Web root: https://${sys_hostname}.${sys_domain} >> installer.log
 echo --------------------------------- >> installer.log
 echo FuGlu version: ${fuglu_version} >> installer.log
-echo mailcow version: ${mailcow_version} >> installer.log
+echo mailcow version: ${mailcow_sogo_version} >> installer.log
 echo --------------------------------- >> installer.log
 
 installtask environment
@@ -111,7 +111,7 @@ returnwait "OpenDKIM configuration" "Restarting services"
 installtask restartservices
 returnwait "Restarting services" "Finish installation"
 
-echo ${mailcow_version} > /etc/mailcow_version
+echo ${mailcow_sogo_version} > /etc/mailcow_sogo_version
 chmod 600 installer.log
 echo
 echo "`tput setaf 2`Finished installation`tput sgr0`"

@@ -54,8 +54,8 @@ returnwait() {
 }
 
 checksystem() {
-	if [[ $(grep MemTotal /proc/meminfo | awk '{print $2}') -lt 800000 ]]; then
-		echo "$(yellowb [WARN]) - At least 800MB of memory is highly recommended"
+	if [[ $(grep MemTotal /proc/meminfo | awk '{print $2}') -lt 2000000 ]]; then
+		echo "$(yellowb [WARN]) - At least 2000MB of memory is highly recommended"
 		read -p "Press ENTER to skip this warning or CTRL-C to cancel the process"
 	fi
 	[[ ! -z $(ip -6 addr | grep "scope global") ]] && IPV6="yes"
@@ -90,13 +90,6 @@ checkports() {
 		fi
 		echo "$(textb [INFO]) - Successfully connected to SQL server at ${my_dbhost}"
 		echo
-		if [[ ${my_dbhost} == "localhost" || ${my_dbhost} == "127.0.0.1" ]] && [[ -z $(mysql -V | grep -i "mariadb") && $my_usemariadb == "yes" ]]; then
-			echo "$(redb [ERR]) - Found MySQL server but \"my_usemariadb\" is \"yes\""
-			exit 1
-		elif [[ ${my_dbhost} == "localhost" || ${my_dbhost} == "127.0.0.1" ]] && [[ ! -z $(mysql -V | grep -i "mariadb") && $my_usemariadb != "yes" ]]; then
-			echo "$(redb [ERR]) - Found MariaDB server but \"my_usemariadb\" is not \"yes\""
-			exit 1
-		fi
 		mysql_useable=1
 	fi
 }
@@ -179,19 +172,12 @@ installtask() {
 			/usr/sbin/make-ssl-cert generate-default-snakeoil --force-overwrite
 			echo "$(textb [INFO]) - Installing packages unattended, please stand by, errors will be reported."
 			if [[ ${my_dbhost} == "localhost" || ${my_dbhost} == "127.0.0.1" ]] && [[ $is_upgradetask != "yes" ]]; then
-				if [[ $my_usemariadb == "yes" ]]; then
-					database_backend="mariadb-client mariadb-server"
-				else
-					database_backend="mysql-client mysql-server"
-				fi
+				database_backend="mysql-client mysql-server"
 			else
 				database_backend=""
 			fi
 DEBIAN_FRONTEND=noninteractive apt-get --force-yes -y install zip dnsutils python-setuptools libmail-spf-perl libmail-dkim-perl file \
-openssl php-auth-sasl php-http-request php-mail php-mail-mime php-mail-mimedecode php-net-dime php-net-smtp \
-php-net-socket php-net-url php-pear php-soap php5 php5-cli php5-common php5-curl php5-gd php5-imap php-apc subversion \
-php5-intl php5-xsl libawl-php php5-mcrypt php5-mysql php5-sqlite libawl-php php5-xmlrpc ${database_backend} mailutils pyzor razor \
-postfix postfix-mysql postfix-pcre postgrey pflogsumm spamassassin spamc sudo bzip2 curl mpack opendkim opendkim-tools unzip clamav-daemon \
+openssl php5-mcrypt php5-mysql ${database_backend} mailutils pyzor razor postfix postfix-mysql postfix-pcre pflogsumm spamassassin spamc sudo bzip2 curl mpack opendkim opendkim-tools unzip clamav-daemon \
 python-magic unrar-free liblockfile-simple-perl libdbi-perl libmime-base64-urlsafe-perl libtest-tempdir-perl liblogger-syslog-perl bsd-mailx \
 openjdk-7-jre-headless libcurl4-openssl-dev libexpat1-dev rrdtool mailgraph fcgiwrap spawn-fcgi \
 solr-jetty apache2 apache2-utils libapache2-mod-php5 sogo sogo-activesync libwbxml2-0 memcached > /dev/null
@@ -219,41 +205,10 @@ DEBIAN_FRONTEND=noninteractive apt-get --force-yes -y install dovecot-common dov
 			rm /etc/ssl/mail/* 2> /dev/null
 			echo "$(textb [INFO]) - Generating 2048 bit DH parameters, this may take a while, please wait..."
 			openssl dhparam -out /etc/ssl/mail/dhparams.pem 2048 2> /dev/null
-			if [[ ${httpd_lets_encrypt} == "yes" ]]; then
-				echo "$(textb [INFO]) - Requesting certificates from Let's Encrypt..."
-				service apache2 stop 2> /dev/null
-				wget https://github.com/letsencrypt/letsencrypt/archive/v${letsencrypt}.tar.gz -O - | tar xfz -
-				./letsencrypt-${letsencrypt}/letsencrypt-auto certonly --standalone -d ${sys_hostname}.${sys_domain} #-d autodiscover
-				echo "$(textb [INFO]) - Searching for useable certificate..."
-				if [[ -d /etc/letsencrypt/live ]]; then
-					for i in $(ls /etc/letsencrypt/live); do
-						if [[ ! -z $(openssl x509 -in "/etc/letsencrypt/live/$i/fullchain.pem" -text -noout | \
-							#grep -E "DNS:autodiscover.${sys_domain}" | \
-							grep -E "DNS:${sys_hostname}.${sys_domain}") ]]; then
-									LE_CERT_PATH="/etc/letsencrypt/live/$i"
-									break
-						fi
-					done
-					if [[ -z ${LE_CERT_PATH} ]]; then
-						LETS_FAILED="1"
-						echo "$(yellowb [WARN]) - Cannot find a proper certificate path, falling back to self-signed..."
-					else
-						ln -s ${LE_CERT_PATH}/fullchain.pem /etc/ssl/mail/mail.crt
-						ln -s ${LE_CERT_PATH}/privkey.pem /etc/ssl/mail/mail.key
-						echo "$(textb [INFO]) - Found useable certificates"
-					fi
-				else
-					LETS_FAILED="1"
-					echo "$(yellowb [WARN]) - Let's Encrypt request failed, falling back to self-signed certificates..."
-				fi
-				rm -r letsencrypt-${letsencrypt}
-			fi
-			if [[ ${LETS_FAILED} == "1" ]] || [[ ${httpd_lets_encrypt} != "yes" ]]; then
-				openssl req -new -newkey rsa:4096 -sha256 -days 1095 -nodes -x509 -subj "/C=ZZ/ST=mailcow/L=mailcow/O=mailcow/CN=${sys_hostname}.${sys_domain}/subjectAltName=DNS.1=${sys_hostname}.${sys_domain}" -keyout /etc/ssl/mail/mail.key -out /etc/ssl/mail/mail.crt
-				chmod 600 /etc/ssl/mail/mail.key
-				cp /etc/ssl/mail/mail.crt /usr/local/share/ca-certificates/
-				update-ca-certificates
-			fi
+			openssl req -new -newkey rsa:4096 -sha256 -days 1095 -nodes -x509 -subj "/C=ZZ/ST=mailcow/L=mailcow/O=mailcow/CN=${sys_hostname}.${sys_domain}/subjectAltName=DNS.1=${sys_hostname}.${sys_domain}" -keyout /etc/ssl/mail/mail.key -out /etc/ssl/mail/mail.crt
+			chmod 600 /etc/ssl/mail/mail.key
+			cp /etc/ssl/mail/mail.crt /usr/local/share/ca-certificates/
+			update-ca-certificates
 			;;
 		mysql)
 			if [[ $mysql_useable -ne 1 ]]; then
@@ -280,11 +235,10 @@ DEBIAN_FRONTEND=noninteractive apt-get --force-yes -y install dovecot-common dov
 			sed -i "s/my_mailcowuser/${my_mailcowuser}/g" /etc/postfix/sql/*
 			sed -i "s/my_mailcowdb/${my_mailcowdb}/g" /etc/postfix/sql/*
 			sed -i "s/my_dbhost/${my_dbhost}/g" /etc/postfix/sql/*
-			sed -i '/^POSTGREY_OPTS=/s/=.*/="--inet=127.0.0.1:10023"/' /etc/default/postgrey
 			chmod 755 /var/spool/
 			sed -i "/%www-data/d" /etc/sudoers 2> /dev/null
 			sed -i "/%vmail/d" /etc/sudoers 2> /dev/null
-			echo '%www-data ALL=(ALL) NOPASSWD: /usr/bin/doveadm * sync *, /usr/local/sbin/mc_pfset *, /usr/bin/doveadm quota recalc -A, /usr/sbin/dovecot reload, /usr/sbin/postfix reload, /usr/local/sbin/mc_dkim_ctrl, /usr/local/sbin/mc_msg_size, /usr/local/sbin/mc_pflog_renew, /usr/local/sbin/mc_setup_backup' >> /etc/sudoers
+			echo '%www-data ALL=(ALL) NOPASSWD: /usr/bin/doveadm * sync *, /usr/bin/doveadm quota recalc -A, /usr/sbin/dovecot reload, /usr/sbin/postfix reload, /usr/local/sbin/mc_dkim_ctrl, /usr/sbin/postconf -e message_size_limit*, /usr/local/sbin/mc_pflog_renew' >> /etc/sudoers
 			;;
 		fuglu)
 			if [[ -z $(grep fuglu /etc/passwd) ]]; then
@@ -297,20 +251,24 @@ DEBIAN_FRONTEND=noninteractive apt-get --force-yes -y install dovecot-common dov
 			rm /tmp/fuglu_control.sock 2> /dev/null
 			mkdir /var/log/fuglu 2> /dev/null
 			chown fuglu:fuglu /var/log/fuglu
-			tar xf fuglu/inst/$fuglu_version.tar -C fuglu/inst/ 2> /dev/null
-			(cd fuglu/inst/$fuglu_version ; python setup.py -q install)
+			tar xf fuglu/inst/${fuglu_version}.tar -C fuglu/inst/ 2> /dev/null
+			(cd fuglu/inst/${fuglu_version} ; python setup.py -q install)
 			cp -R fuglu/conf/* /etc/fuglu/
 			if [[ -f /lib/systemd/systemd ]]; then
-				cp fuglu/inst/$fuglu_version/scripts/startscripts/debian/8/fuglu.service /etc/systemd/system/fuglu.service
+				cp fuglu/inst/${fuglu_version}/scripts/startscripts/debian/8/fuglu.service /etc/systemd/system/fuglu.service
 				systemctl disable fuglu
 				[[ -f /lib/systemd/system/fuglu.service ]] && rm /lib/systemd/system/fuglu.service
 				systemctl daemon-reload
 				systemctl enable fuglu
 			else
-				install -m 755 fuglu/inst/$fuglu_version/scripts/startscripts/debian/7/fuglu /etc/init.d/fuglu
+				install -m 755 fuglu/inst/${fuglu_version}/scripts/startscripts/debian/7/fuglu /etc/init.d/fuglu
 				update-rc.d fuglu defaults
 			fi
-			rm -rf fuglu/inst/$fuglu_version
+			sed -i "s/my_mailcowpass/${my_mailcowpass}/g" /etc/fuglu/fuglu.conf
+			sed -i "s/my_mailcowuser/${my_mailcowuser}/g" /etc/fuglu/fuglu.conf
+			sed -i "s/my_mailcowdb/${my_mailcowdb}/g" /etc/fuglu/fuglu.conf
+			sed -i "s/my_dbhost/${my_dbhost}/g" /etc/fuglu/fuglu.conf
+			rm -rf fuglu/inst/${fuglu_version}
 			;;
 		dovecot)
 			if [[ -f /lib/systemd/systemd ]]; then
@@ -449,6 +407,10 @@ DatabaseMirror clamav.inode.at" >> /etc/clamav/freshclam.conf
 			sed -i '/^OPTIONS=/s/=.*/="--create-prefs --max-children 5 --helper-home-dir --username debian-spamd --socketpath \/var\/run\/spamd.sock --socketowner debian-spamd --socketgroup debian-spamd"/' /etc/default/spamassassin
 			sed -i '/^CRON=/s/=.*/="1"/' /etc/default/spamassassin
 			sed -i '/^ENABLED=/s/=.*/="1"/' /etc/default/spamassassin
+			sed -i "s/my_mailcowpass/${my_mailcowpass}/g" /etc/spamassassin/local.cf
+			sed -i "s/my_mailcowuser/${my_mailcowuser}/g" /etc/spamassassin/local.cf
+			sed -i "s/my_mailcowdb/${my_mailcowdb}/g" /etc/spamassassin/local.cf
+			sed -i "s/my_dbhost/${my_dbhost}/g" /etc/spamassassin/local.cf
 			# Thanks to mf3hd@GitHub
 			[[ -z $(grep RANDOM_DELAY /etc/crontab) ]] && sed -i '/SHELL/a RANDOM_DELAY=30' /etc/crontab
 			install -m 755 spamassassin/conf/spamlearn /etc/cron.daily/spamlearn
@@ -484,6 +446,7 @@ DatabaseMirror clamav.inode.at" >> /etc/clamav/freshclam.conf
 			sed -i "s/my_mailcowpass/${my_mailcowpass}/g" /var/www/mail/inc/vars.inc.php
 			sed -i "s/my_mailcowuser/${my_mailcowuser}/g" /var/www/mail/inc/vars.inc.php
 			sed -i "s/my_mailcowdb/${my_mailcowdb}/g" /var/www/mail/inc/vars.inc.php
+			sed -i "s/sys_hostname/${sys_hostname}/g" /var/www/mail/inc/vars.inc.php
 			chown -R www-data: /var/www/{.,mail} /var/lib/php5/sessions /var/mailcow/mailbox_backup_env
 			mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} < webserver/htdocs/init.sql
 			if [[ $(mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -s -N -e "SELECT * FROM admin;" | wc -l) -lt 1 ]]; then
@@ -502,7 +465,9 @@ DatabaseMirror clamav.inode.at" >> /etc/clamav/freshclam.conf
 			defaults write sogod SOGoUserSources '({type = sql;id = directory;viewURL = mysql://${my_mailcowuser}:${my_mailcowpass}@${my_dbhost}:3306/${my_mailcowdb}/sogo_view;canAuthenticate = YES;isAddressBook = YES;displayName = \"Global Address Book\";userPasswordAlgorithm = ssha256;})'
 			defaults write sogod SOGoProfileURL 'mysql://${my_mailcowuser}:${my_mailcowpass}@${my_dbhost}:3306/${my_mailcowdb}/sogo_user_profile'
 			defaults write sogod OCSFolderInfoURL 'mysql://${my_mailcowuser}:${my_mailcowpass}@${my_dbhost}:3306/${my_mailcowdb}/sogo_folder_info'
+			defaults write sogod OCSEMailAlarmsFolderURL 'mysql://${my_mailcowuser}:${my_mailcowpass}@${my_dbhost}:3306/${my_mailcowdb}/sogo_alarms_folder'
 			defaults write sogod OCSSessionsFolderURL 'mysql://${my_mailcowuser}:${my_mailcowpass}@${my_dbhost}:3306/${my_mailcowdb}/sogo_sessions_folder'
+			defaults write sogod SOGoEnableEMailAlarms YES
 			defaults write sogod SOGoPageTitle '${sys_hostname}.${sys_domain}';
 			defaults write sogod SOGoForwardEnabled YES;
 			defaults write sogod SOGoMailAuxiliaryUserAccountsEnabled YES;
@@ -530,9 +495,12 @@ DatabaseMirror clamav.inode.at" >> /etc/clamav/freshclam.conf
 			defaults write sogod SOGoMaximumSyncInterval 3;
 			defaults write sogod SOGoInternalSyncInterval 3;"
 			# ~1 for 10 users, more when AS is enabled
-			sed -i '/PREFORK/c\PREFORK=15' /etc/default/sogo
+			PREFORK=$(( ($(free -mt | grep Total | awk '{print $2}') - 100) / 384))
+			sed -i "/PREFORK/c\PREFORK=${PREFORK}" /etc/default/sogo
+			sed -i '/SHOWWARNING/c\SHOWWARNING=false' /etc/tmpreaper.conf
 			sed -i '/expire-autoreply/s/^#//g' /etc/cron.d/sogo
 			sed -i '/expire-sessions/s/^#//g' /etc/cron.d/sogo
+			sed -i '/ealarms-notify/s/^#//g' /etc/cron.d/sogo
 			;;
 		restartservices)
 			[[ -f /lib/systemd/systemd ]] && echo "$(textb [INFO]) - Restarting services, this may take a few seconds..."
@@ -546,11 +514,11 @@ DatabaseMirror clamav.inode.at" >> /etc/clamav/freshclam.conf
 	esac
 }
 upgradetask() {
-	if [[ ! -f /etc/mailcow_version && ! -f /etc/fufix_version ]]; then
-		echo "$(redb [ERR]) - mailcow is not installed"
+	if [[ ! -f /etc/mailcow_sogo_version ]]; then
+		echo "$(redb [ERR]) - mailcow SOGo is not installed"
 		exit 1
 	fi
-	if [[ -z $(cat /etc/{fufix_version,mailcow_version} 2> /dev/null | grep -E "0.9|0.10|0.11|0.12|0.13|0.14") ]]; then
+	if [[ -z $(grep -E "0.1" /etc/mailcow_sogo_version) ]]; then
 		echo "$(redb [ERR]) - Upgrade not supported"
 		exit 1
 	fi
@@ -641,10 +609,7 @@ A backup will be stored in ./before_upgrade_$timestamp
 	installtask spamassassin
 	returnwait "Spamassassin configuration" "Webserver configuration"
 
-	rm -rf /var/lib/php5/sessions/*
 	mkdir -p /var/mailcow/log
-	mv /var/www/MAILBOX_BACKUP /var/mailcow/mailbox_backup_env 2> /dev/null
-	mv /var/www/PFLOG /var/mailcow/log/pflogsumm.log 2> /dev/null
 
 	installtask webserver
 	returnwait "Webserver configuration" "SOGo configuration"

@@ -88,6 +88,24 @@ CREATE TABLE IF NOT EXISTS `quota2` (
   PRIMARY KEY (`username`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
+CREATE TABLE IF NOT EXISTS `fugluconfig` (
+  `scope` varchar(255) NOT NULL,
+  `section` varchar(255) NOT NULL,
+  `option` varchar(255) NOT NULL,
+  `value` varchar(255) NOT NULL,
+  PRIMARY KEY (`scope`,`section`,`option`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+CREATE TABLE IF NOT EXISTS `userpref` (
+  `username` varchar(100) NOT NULL DEFAULT '',
+  `preference` varchar(50) NOT NULL DEFAULT '',
+  `value` varchar(100) NOT NULL DEFAULT '',
+  `prefid` int(11) NOT NULL AUTO_INCREMENT,
+  PRIMARY KEY (`prefid`),
+  KEY `username` (`username`)
+) ENGINE=InnoDB AUTO_INCREMENT=80 DEFAULT CHARSET=latin1;
+
+
 ALTER TABLE `quota2` ENGINE=InnoDB;
 ALTER TABLE `mailbox` ENGINE=InnoDB;
 ALTER TABLE `domain_admins` ENGINE=InnoDB;

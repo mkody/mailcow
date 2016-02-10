@@ -46,9 +46,6 @@ smtpd_delay_reject = yes
 # Enable elliptic curve cryptography, "ultra" needs more cpu time
 smtpd_tls_eecdh_grade = strong
 
-# Default: Anonymize outgoing mail headers
-smtp_header_checks = pcre:/etc/postfix/mailcow_anonymize_headers.pcre
-
 # Sender, recipient, client and data restrictions
 smtpd_sender_restrictions = reject_authenticated_sender_login_mismatch,
    permit_mynetworks,
@@ -59,7 +56,6 @@ smtpd_sender_restrictions = reject_authenticated_sender_login_mismatch,
 
 smtpd_recipient_restrictions = permit_sasl_authenticated,
    permit_mynetworks,
-   reject_non_fqdn_helo_hostname,
    reject_invalid_helo_hostname,
    reject_unknown_reverse_client_hostname,
    reject_unauth_destination
@@ -67,11 +63,6 @@ smtpd_recipient_restrictions = permit_sasl_authenticated,
 smtpd_data_restrictions =
    reject_unauth_pipelining,
    permit
-
-smtpd_restriction_classes = z1_greylisting
-
-z1_greylisting = permit_dnswl_client list.dnswl.org,
-   check_policy_service inet:127.0.0.1:10023
 
 # Determine valid MAIL FROM addresses for a SASL authenticated user.
 
