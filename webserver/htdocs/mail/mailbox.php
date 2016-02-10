@@ -103,7 +103,7 @@ $_SESSION['return_to'] = $_SERVER['REQUEST_URI']; ?> <div class="container">
 							<?php
 							if ($_SESSION['mailcow_cc_role'] == "admin"):
 							?>
-								<td><?=$lang['mailbox']['remove'];?> (API) | <a href="/edit/domain/<?=$row['domain'];?>"><?=$lang['mailbox']['edit'];?></a></td>
+								<td><a href="/delete/domain/<?=$row['domain'];?>"><?=$lang['mailbox']['remove'];?> | <a href="/edit/domain/<?=$row['domain'];?>"><?=$lang['mailbox']['edit'];?></a></td>
 							<?php
 							else:
 							?>
