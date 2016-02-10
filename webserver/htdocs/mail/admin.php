@@ -67,6 +67,7 @@ if (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == 'admi
 						</tr>
 						</thead>
 						<tbody>
+							<?php
 							$result = mysqli_query($link, "SELECT
 								username,
 								LOWER(GROUP_CONCAT(DISTINCT domain SEPARATOR ', ')) AS domain,
@@ -270,7 +271,8 @@ elseif (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == "
 elseif (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == "user") {
 	header('Location: /user');
 	die("Permission denied");
-} else {
+}
+else {
 ?>
 <div class="panel panel-default">
 	<div class="panel-heading"><?=$lang['login']['title'];?></div>
