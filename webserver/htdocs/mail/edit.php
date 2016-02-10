@@ -375,17 +375,6 @@ if (isset($_SESSION['mailcow_cc_loggedin']) && $_SESSION['mailcow_cc_loggedin'] 
 						</div>
 					</div>
 					<div class="form-group">
-						<label class="control-label col-sm-2" for="ratelimit"><?=$lang['edit']['ratelimit'];?></label>
-						<div class="col-sm-10">
-						<?php
-							$RatelimitData = mysqli_fetch_assoc(mysqli_query($link,
-								"SELECT `quota` FROM `ratelimit`
-									WHERE sender='".$mailbox."'"));
-						?>
-						<input type="number" class="form-control" name="ratelimit" id="ratelimit" value="<?=(!empty($RatelimitData['quota'])) ? $RatelimitData['quota'] : "1000"?>">
-						</div>
-					</div>
-					<div class="form-group">
 						<div class="col-sm-offset-2 col-sm-10">
 							<div class="checkbox">
 							<label><input type="checkbox" name="active" <?=($result['active']=="1") ? "checked" : "";?>> <?=$lang['edit']['active'];?></label>

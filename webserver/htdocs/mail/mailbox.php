@@ -200,7 +200,6 @@ $_SESSION['return_to'] = $_SERVER['REQUEST_URI']; ?> <div class="container">
 							<th><?=$lang['mailbox']['quota'];?></th>
 							<th><?=$lang['mailbox']['in_use'];?></th>
 							<th><?=$lang['mailbox']['msg_num'];?></th>
-							<th><?=$lang['mailbox']['ratelimit'];?></th>
 							<th><?=$lang['mailbox']['active'];?></th>
 							<th><?=$lang['mailbox']['action'];?></th>
 						</tr>
@@ -226,12 +225,6 @@ $_SESSION['return_to'] = $_SERVER['REQUEST_URI']; ?> <div class="container">
 											)
 											OR 'admin'='".$_SESSION['mailcow_cc_role']."')");
 						while ($row = mysqli_fetch_array($result)):
-							$RatelimitData	= mysqli_fetch_assoc(mysqli_query($link,
-								"SELECT
-									`quota`,
-									`used`
-										FROM `ratelimit`
-											WHERE `sender`='".$row['username']."'"));
 						?>
 						<tr>
 							<?php
@@ -250,7 +243,6 @@ $_SESSION['return_to'] = $_SERVER['REQUEST_URI']; ?> <div class="container">
 							<td><?=formatBytes($row['quota'], 2);?></td>
 							<td><?=formatBytes($row['bytes'], 2);?></td>
 							<td><?=$row['messages'];?></td>
-							<td><?=(isset($RatelimitData['used'])) ? $RatelimitData['used'] : "0"?> / <?=(isset($RatelimitData['quota'])) ? $RatelimitData['quota'] : "1000"?></td>
 							<td><?=$row['active'];?></td>
 							<td><a href="/delete/mailbox/<?=$row['username'];?>"><?=$lang['mailbox']['remove'];?></a> |
 							<a href="/edit/mailbox/<?=$row['username'];?>"><?=$lang['mailbox']['edit'];?></a></td>

@@ -928,7 +928,6 @@ function mailbox_edit_mailbox($link, $postarray) {
 	$username		= mysqli_real_escape_string($link, $postarray['username']);
 	$name			= mysqli_real_escape_string($link, $postarray['name']);
 	$password		= $postarray['password'];
-	$ratelimit		= $postarray['ratelimit'];
 	$MailboxData1	= mysqli_fetch_assoc(mysqli_query($link,
 		"SELECT `domain`
 			FROM `mailbox`
@@ -962,13 +961,6 @@ function mailbox_edit_mailbox($link, $postarray) {
 		$_SESSION['return'] = array(
 			'type' => 'danger',
 			'msg' => sprintf($lang['danger']['quota_not_0_not_numeric'], htmlspecialchars($quota_m))
-		);
-		return false;
-	}
-	if (!is_numeric($ratelimit) || $ratelimit <1) {
-		$_SESSION['return'] = array(
-			'type' => 'danger',
-			'msg' => sprintf($lang['danger']['ratelimt_less_one'])
 		);
 		return false;
 	}
@@ -1063,21 +1055,6 @@ function mailbox_edit_mailbox($link, $postarray) {
 			'msg' => sprintf($lang['success']['mailbox_modified'], $username)
 		);
 		return true;
-	}
-	$ratelimitDataArray = array(
-		"DELETE FROM ratelimit
-			WHERE sender='".$username."';",
-		"INSERT INTO ratelimit (`sender`, `quota`, `updated`, expiry)
-			VALUES ('".$username."', '".$ratelimit."', NOW(), UNIX_TIMESTAMP(NOW() + INTERVAL 1 HOUR))"
-	);
-	foreach ($ratelimitDataArray as $ratelimitData) {
-		if (!mysqli_query($link, $ratelimitData)) {
-			$_SESSION['return'] = array(
-				'type' => 'danger',
-				'msg' => 'MySQL error: '.mysqli_error($link)
-			);
-			return false;
-		}
 	}
 	$UpdateMailboxArray = array(
 		"UPDATE `alias` SET
