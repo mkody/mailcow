@@ -40,7 +40,7 @@ function check_login($link, $user, $pass, $set_user_account = "no") {
 		$result = mysqli_query($link, "SELECT `password` FROM `mailbox` WHERE active='1' AND username='$user'");
 		while ($row = mysqli_fetch_array($result, MYSQLI_NUM)) {
 			$row = "'".$row[0]."'";
-			exec("echo ".$pass." | doveadm pw -s ".$GLOBALS['PASS_SCHEME']." -t ".$row, $out, $return);
+			exec("echo ".$pass." | /usr/bin/doveadm pw -s ".$GLOBALS['PASS_SCHEME']." -t ".$row, $out, $return);
 			if (isset($out[0]) && strpos($out[0], "verified") !== false && $return == "0") {
 				unset($_SESSION['ldelay']);
 				return "user";
@@ -57,7 +57,7 @@ function check_login($link, $user, $pass, $set_user_account = "no") {
 		AND `username`='".$user."'");
 	while ($row = mysqli_fetch_array($result, MYSQLI_NUM)) {
 		$row = "'".$row[0]."'";
-		exec("echo ".$pass." | doveadm pw -s ".$GLOBALS['PASS_SCHEME']." -t ".$row, $out, $return);
+		exec("echo ".$pass." | /usr/bin/doveadm pw -s ".$GLOBALS['PASS_SCHEME']." -t ".$row, $out, $return);
 		if (isset($out[0]) && strpos($out[0], "verified") !== false && $return == "0") {
 			unset($_SESSION['ldelay']);
 			return "admin";
@@ -69,7 +69,7 @@ function check_login($link, $user, $pass, $set_user_account = "no") {
 		AND `username`='".$user."'");
 	while ($row = mysqli_fetch_array($result, MYSQLI_NUM)) {
 		$row = "'".$row[0]."'";
-		exec("echo ".$pass." | doveadm pw -s ".$GLOBALS['PASS_SCHEME']." -t ".$row, $out, $return);
+		exec("echo ".$pass." | /usr/bin/doveadm pw -s ".$GLOBALS['PASS_SCHEME']." -t ".$row, $out, $return);
 		if (isset($out[0]) && strpos($out[0], "verified") !== false && $return == "0") {
 			unset($_SESSION['ldelay']);
 			return "domainadmin";
@@ -80,7 +80,7 @@ function check_login($link, $user, $pass, $set_user_account = "no") {
 		AND `username`='".$user."'");
 	while ($row = mysqli_fetch_array($result, MYSQLI_NUM)) {
 		$row = "'".$row[0]."'";
-		exec("echo ".$pass." | doveadm pw -s ".$GLOBALS['PASS_SCHEME']." -t ".$row, $out, $return);
+		exec("echo ".$pass." | /usr/bin/doveadm pw -s ".$GLOBALS['PASS_SCHEME']." -t ".$row, $out, $return);
 		if (isset($out[0]) && strpos($out[0], "verified") !== false && $return == "0") {
 			unset($_SESSION['ldelay']);
 			return "user";
@@ -928,6 +928,7 @@ function mailbox_edit_mailbox($link, $postarray) {
 	$username		= mysqli_real_escape_string($link, $postarray['username']);
 	$name			= mysqli_real_escape_string($link, $postarray['name']);
 	$password		= $postarray['password'];
+	$password2		= $postarray['password2'];
 	$MailboxData1	= mysqli_fetch_assoc(mysqli_query($link,
 		"SELECT `domain`
 			FROM `mailbox`
@@ -1132,14 +1133,6 @@ function mailbox_delete_domain($link, $domain) {
 			return false;
 		}
 	}
-	exec('sudo /usr/local/sbin/mc_clean_domain '.$domain, $return, $ec);
-	if ($ec != "0") {
-		$_SESSION['return'] = array(
-			'type' => 'danger',
-			'msg' => sprintf($lang['danger']['exit_code_not_null'], $ec)
-		);
-		return false;
-	}
 	exec('sudo /usr/local/sbin/mc_dkim_ctrl del default '.$domain, $return, $ec);
 	if ($ec != "0") {
 		$_SESSION['return'] = array(
@@ -1258,14 +1251,6 @@ function mailbox_delete_mailbox($link, $postarray) {
 			);
 			return false;
 		}
-	}
-	exec('sudo /usr/local/sbin/mc_clean_mailbox '.$username, $return, $ec);
-	if ($ec != "0") {
-		$_SESSION['return'] = array(
-			'type' => 'danger',
-			'msg' => sprintf($lang['danger']['exit_code_not_null'], $ec)
-		);
-		return false;
 	}
 	$_SESSION['return'] = array(
 		'type' => 'success',

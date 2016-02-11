@@ -119,21 +119,19 @@ if (isset($_SESSION['mailcow_cc_loggedin']) && $_SESSION['mailcow_cc_loggedin'] 
 						<label class="control-label col-sm-2" for="alias_domain"><?=$lang['add']['alias_domain'];?>:</label>
 						<div class="col-sm-10">
 							<select name="alias_domain" title="<?=$lang['add']['select'];?>" size="1">
-							<?php
-							$result = mysqli_query($link, "SELECT `domain` FROM `domain_admins`
-								WHERE domain!='ALL' 
-								AND (
-									(
-										`username`='".$_SESSION['mailcow_cc_username']."'
-										AND active='1'
-									)
-									OR 'admin'='".$_SESSION['mailcow_cc_role']."'
-								)")
-								OR die(mysqli_error($link));
-							while ($row = mysqli_fetch_array($result)) {
-								echo "<option>".$row['domain']."</option>";
-							}
-							?>
+								<?php
+								$result = mysqli_query($link, "SELECT `domain` FROM `domain`
+										WHERE `domain` IN (
+												SELECT `domain` FROM `domain_admins`
+														WHERE `username`='".$_SESSION['mailcow_cc_username']."'
+														AND active='1'
+												)
+										OR 'admin'='".$_SESSION['mailcow_cc_role']."'")
+										OR die(mysqli_error($link));
+								while ($row = mysqli_fetch_array($result)) {
+										echo "<option>".$row['domain']."</option>";
+								}
+								?>
 							</select>
 						</div>
 					</div>
@@ -141,21 +139,19 @@ if (isset($_SESSION['mailcow_cc_loggedin']) && $_SESSION['mailcow_cc_loggedin'] 
 						<label class="control-label col-sm-2" for="name"><?=$lang['add']['target_domain'];?></label>
 						<div class="col-sm-10">
 							<select name="target_domain" title="<?=$lang['add']['select'];?>">
-							<?php
-							$result = mysqli_query($link, "SELECT `domain` FROM `domain_admins`
-								WHERE domain!='ALL' 
-								AND (
-									(
-										`username`='".$_SESSION['mailcow_cc_username']."'
-										AND active='1'
-									)
-									OR 'admin'='".$_SESSION['mailcow_cc_role']."'
-								)")
-								OR die(mysqli_error($link));
-							while ($row = mysqli_fetch_array($result)) {
-								echo "<option>".$row['domain']."</option>";
-							}
-							?>
+								<?php
+								$result = mysqli_query($link, "SELECT `domain` FROM `domain`
+										WHERE `domain` IN (
+												SELECT `domain` FROM `domain_admins`
+														WHERE `username`='".$_SESSION['mailcow_cc_username']."'
+														AND active='1'
+												)
+										OR 'admin'='".$_SESSION['mailcow_cc_role']."'")
+										OR die(mysqli_error($link));
+								while ($row = mysqli_fetch_array($result)) {
+										echo "<option>".$row['domain']."</option>";
+								}
+								?>
 							</select>
 						</div>
 					</div>
@@ -188,19 +184,19 @@ if (isset($_SESSION['mailcow_cc_loggedin']) && $_SESSION['mailcow_cc_loggedin'] 
 						<label class="control-label col-sm-2" for="name"><?=$lang['add']['domain'];?>:</label>
 						<div class="col-sm-10">
 							<select name="domain" title="<?=$lang['add']['select'];?>">
-                                                        <?php
-                                                        $result = mysqli_query($link, "SELECT `domain` FROM `domain`
-                                                                WHERE `domain` IN (
-                                                                        SELECT `domain` FROM `domain_admins`
-                                                                                WHERE `username`='".$_SESSION['mailcow_cc_username']."'
-                                                                                AND active='1'
-                                                                        )
-                                                                OR 'admin'='".$_SESSION['mailcow_cc_role']."'")
-                                                                OR die(mysqli_error($link));
-                                                        while ($row = mysqli_fetch_array($result)) {
-                                                                echo "<option>".$row['domain']."</option>";
-                                                        }
-                                                        ?>
+								<?php
+								$result = mysqli_query($link, "SELECT `domain` FROM `domain`
+										WHERE `domain` IN (
+												SELECT `domain` FROM `domain_admins`
+														WHERE `username`='".$_SESSION['mailcow_cc_username']."'
+														AND active='1'
+												)
+										OR 'admin'='".$_SESSION['mailcow_cc_role']."'")
+										OR die(mysqli_error($link));
+								while ($row = mysqli_fetch_array($result)) {
+										echo "<option>".$row['domain']."</option>";
+								}
+								?>
 							</select>
 						</div>
 					</div>

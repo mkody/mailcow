@@ -1,9 +1,9 @@
 <?php
 require_once("inc/header.inc.php");
-if (isset($_SESSION['mailcow_cc_role'] && $_SESSION['mailcow_cc_role'] == 'user') {
+if (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == 'user') {
 	$_SESSION['return_to'] = $_SERVER['REQUEST_URI'];
 	$username = $_SESSION['mailcow_cc_username'];
-}
+
 ?>
 <div class="container">
 <p class="lead"><?=$lang['user']['did_you_know'];?></p>
@@ -14,22 +14,15 @@ if (isset($_SESSION['mailcow_cc_role'] && $_SESSION['mailcow_cc_role'] == 'user'
 <form class="form-horizontal" role="form" method="post" autocomplete="off">
 	<p><?=$lang['user']['user_change_fn'];?></p>
 	<div class="form-group">
-		<div class="col-sm-offset-3 col-sm-10">
-			<div class="checkbox">
-				<label><input type="checkbox" name="togglePwNew" id="togglePwNew"> <?=$lang['user']['change_password'];?></label>
-			</div>
-		</div>
-	</div>
-	<div class="form-group">
 		<label class="control-label col-sm-3" for="user_new_pass"><?=$lang['user']['new_password'];?></label>
 		<div class="col-sm-5">
-		<input type="password" class="form-control" pattern="(?=.*[A-Za-z])(?=.*[0-9])\w{6,}" name="user_new_pass" id="user_new_pass" autocomplete="off" disabled="disabled">
+		<input type="password" class="form-control" pattern="(?=.*[A-Za-z])(?=.*[0-9])\w{6,}" name="user_new_pass" id="user_new_pass" autocomplete="off"">
 		</div>
 	</div>
 	<div class="form-group">
 		<label class="control-label col-sm-3" for="user_new_pass2"><?=$lang['user']['new_password_repeat'];?></label>
 		<div class="col-sm-5">
-		<input type="password" class="form-control" pattern="(?=.*[A-Za-z])(?=.*[0-9])\w{6,}" name="user_new_pass2" id="user_new_pass2" disabled="disabled" autocomplete="off">
+		<input type="password" class="form-control" pattern="(?=.*[A-Za-z])(?=.*[0-9])\w{6,}" name="user_new_pass2" id="user_new_pass2" autocomplete="off">
 		<p class="help-block"><?=$lang['user']['new_password_description'];?></p>
 		</div>
 	</div>

@@ -177,7 +177,7 @@ installtask() {
 DEBIAN_FRONTEND=noninteractive apt-get --force-yes -y install zip dnsutils python-setuptools libmail-spf-perl libmail-dkim-perl file \
 openssl php5-intl php5-mcrypt php5-mysql ${database_backend} mailutils pyzor razor postfix postfix-mysql postfix-pcre pflogsumm spamassassin spamc sudo bzip2 curl mpack opendkim opendkim-tools unzip clamav-daemon \
 python-magic unrar-free liblockfile-simple-perl libdbi-perl libmime-base64-urlsafe-perl libtest-tempdir-perl liblogger-syslog-perl bsd-mailx \
-openjdk-7-jre-headless libcurl4-openssl-dev libexpat1-dev rrdtool mailgraph fcgiwrap spawn-fcgi \
+openjdk-7-jre-headless libcurl4-openssl-dev libexpat1-dev rrdtool mailgraph fcgiwrap spawn-fcgi python-sqlalchemy python-mysqldb \
 solr-jetty apache2 apache2-utils libapache2-mod-php5 sogo sogo-activesync libwbxml2-0 memcached > /dev/null
 			if [ "$?" -ne "0" ]; then
 				echo "$(redb [ERR]) - Package installation failed"
@@ -441,7 +441,7 @@ DatabaseMirror clamav.inode.at" >> /etc/clamav/freshclam.conf
 			sed -i "s/my_mailcowpass/${my_mailcowpass}/g" /var/www/mail/inc/vars.inc.php
 			sed -i "s/my_mailcowuser/${my_mailcowuser}/g" /var/www/mail/inc/vars.inc.php
 			sed -i "s/my_mailcowdb/${my_mailcowdb}/g" /var/www/mail/inc/vars.inc.php
-			sed -i "s/sys_hostname/${sys_hostname}/g" /var/www/mail/inc/vars.inc.php
+			sed -i "s/sys_hostname.sys_domain/${sys_hostname}.${sys_domain}/g" /var/www/mail/inc/vars.inc.php
 			chown -R www-data: /var/www/{.,mail} /var/lib/php5/sessions /var/mailcow/mailbox_backup_env
 			mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} < webserver/htdocs/init.sql
 			if [[ $(mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -s -N -e "SELECT * FROM admin;" | wc -l) -lt 1 ]]; then
@@ -493,9 +493,9 @@ EOL
 			defaults write sogod SOGoFoldersSendEMailNotifications YES;
 			defaults write sogod SOGoLanguage English;
 			defaults write sogod SOGoMemcachedHost '127.0.0.1';
-			defaults write sogod SOGoMaximumPingInterval 300;
-			defaults write sogod SOGoMaximumSyncInterval 3;
-			defaults write sogod SOGoInternalSyncInterval 3;"
+			defaults write sogod SOGoMaximumPingInterval 3540;
+			defaults write sogod SOGoMaximumSyncInterval 3540;
+			defaults write sogod SOGoInternalSyncInterval 30;"
 			# ~1 for 10 users, more when AS is enabled
 			PREFORK=$(( ($(free -mt | grep Total | awk '{print $2}') - 100) / 384))
 			sed -i "/PREFORK/c\PREFORK=${PREFORK}" /etc/default/sogo
