@@ -154,9 +154,6 @@ installtask() {
 				fi
 			elif [[ $dist_id == "Ubuntu" ]]; then
 				if [[ $dist_codename == "trusty" ]]; then
-					echo "$(textb [INFO]) - Adding ondrej/apache2 repository..."
-					echo "deb http://ppa.launchpad.net/ondrej/apache2/ubuntu trusty main" > /etc/apt/sources.list.d/ondrej.list
-					apt-key adv --keyserver keyserver.ubuntu.com --recv E5267A6C > /dev/null 2>&1
 					echo "$(textb [INFO]) - Adding official SOGo repository..."
 					echo "deb http://inverse.ca/ubuntu-v3 trusty trusty" > /etc/apt/sources.list.d/sogo.list
 					apt-key adv --keyserver keys.gnupg.net --recv-key 0x810273C4 > /dev/null 2>&1
@@ -178,7 +175,7 @@ DEBIAN_FRONTEND=noninteractive apt-get --force-yes -y install zip dnsutils pytho
 openssl php5-intl php5-mcrypt php5-mysql ${database_backend} mailutils pyzor razor postfix postfix-mysql postfix-pcre pflogsumm spamassassin spamc sudo bzip2 curl mpack opendkim opendkim-tools unzip clamav-daemon \
 python-magic unrar-free liblockfile-simple-perl libdbi-perl libmime-base64-urlsafe-perl libtest-tempdir-perl liblogger-syslog-perl bsd-mailx \
 openjdk-7-jre-headless libcurl4-openssl-dev libexpat1-dev rrdtool mailgraph fcgiwrap spawn-fcgi python-sqlalchemy python-mysqldb \
-solr-jetty apache2 apache2-utils libapache2-mod-php5 sogo sogo-activesync libwbxml2-0 memcached > /dev/null
+solr-jetty nginx apache2-utils php5-fpm sogo sogo-activesync libwbxml2-0 memcached > /dev/null
 			if [ "$?" -ne "0" ]; then
 				echo "$(redb [ERR]) - Package installation failed"
 				exit 1
@@ -424,12 +421,12 @@ DatabaseMirror clamav.inode.at" >> /etc/clamav/freshclam.conf
 			;;
 		webserver)
 			mkdir -p /var/www/ 2> /dev/null
-			rm /etc/apache2/sites-enabled/{mailcow*,000-0-mailcow,000-0-fufix,000-0-mailcow.conf} 2>/dev/null
-			cp webserver/apache2/conf/sites-available/mailcow.conf /etc/apache2/sites-available/
-			ln -s /etc/apache2/sites-available/mailcow.conf /etc/apache2/sites-enabled/000-0-mailcow.conf 2>/dev/null
+			rm /etc/nginx/sites-enabled/{mailcow*,000-0-mailcow,000-0-fufix,000-0-mailcow.conf} 2>/dev/null
+			cp webserver/nginx/conf/sites-available/mailcow.conf /etc/nginx/sites-available/
+			ln -s /etc/nginx/sites-available/mailcow.conf /etc/nginx/sites-enabled/000-0-mailcow.conf 2>/dev/null
 			rm -f /etc/apache/conf-enabled/SOGo.conf
-			sed -i "s/sys_hostname/${sys_hostname}/g" /etc/apache2/sites-available/mailcow.conf
-			sed -i "s/sys_domain/${sys_domain}/g" /etc/apache2/sites-available/mailcow.conf
+			sed -i "s/sys_hostname/${sys_hostname}/g" /etc/nginx/sites-available/mailcow.conf
+			sed -i "s/sys_domain/${sys_domain}/g" /etc/nginx/sites-available/mailcow.conf
 			a2enmod rewrite ssl headers cgi proxy proxy_http > /dev/null 2>&1
 			mkdir /var/lib/php5/sessions 2> /dev/null
 			cp -R webserver/htdocs/mail /var/www/
@@ -451,14 +448,6 @@ DatabaseMirror clamav.inode.at" >> /etc/clamav/freshclam.conf
 			else
 				echo "$(textb [INFO]) - At least one administrator exists, will not create another mailcow administrator"
 			fi
-			if [[ -z $(grep "/var/www/mail" /etc/apache2/apache2.conf) ]]; then
-			cat >>/etc/apache2/apache2.conf <<EOL
-<Directory "/var/www/mail">
-	AllowOverride All
-</Directory>
-EOL
-			sed -i "s/KeepAliveTimeout/KeepAliveTimeout 600/g" /etc/apache2/apache2.conf
-			fi
 			;;
 		sogo)
 			if [[ -z $(mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -e "SHOW TABLES LIKE 'sogo_view'" -N -B) ]]; then
@@ -478,7 +467,7 @@ EOL
 			defaults write sogod SOGoMailDomain '${sys_domain}';
 			defaults write sogod SOGoAppointmentSendEMailNotifications YES;
 			defaults write sogod SOGoSieveScriptsEnabled YES;
-			defaults write sogod SOGoSieveServer 'sieve://${sys_hostname}.${sys_domain}:4190';
+			defaults write sogod SOGoSieveServer 'sieve://${sys_hostname}.${sys_domain}:4190/?tls=YES';
 			defaults write sogod SOGoVacationEnabled YES;
 			defaults write sogod SOGoDraftsFolderName Drafts;
 			defaults write sogod SOGoSentFolderName Sent;
@@ -494,11 +483,12 @@ EOL
 			defaults write sogod SOGoFoldersSendEMailNotifications YES;
 			defaults write sogod SOGoLanguage English;
 			defaults write sogod SOGoMemcachedHost '127.0.0.1';
+			defaults write sogod WOListenQueueSize 300;
 			defaults write sogod WOWatchDogRequestTimeout 10;
 			defaults write sogod SOGoMaximumPingInterval 354;
 			defaults write sogod SOGoMaximumSyncInterval 354;
-			defaults write sogod SOGoMaximumSyncResponseSize 512;
-			defaults write sogod SOGoMaximumSyncWindowSize 256;
+			defaults write sogod SOGoMaximumSyncResponseSize 4096;
+			defaults write sogod SOGoMaximumSyncWindowSize 12288;
 			defaults write sogod SOGoInternalSyncInterval 30;"
 			# ~1 for 10 users, more when AS is enabled
 			PREFORK=$(( ($(free -mt | grep Total | awk '{print $2}') - 100) / 384))
@@ -510,7 +500,7 @@ EOL
 			;;
 		restartservices)
 			[[ -f /lib/systemd/systemd ]] && echo "$(textb [INFO]) - Restarting services, this may take a few seconds..."
-			for var in jetty* apache2 spamassassin fuglu dovecot postfix opendkim clamav-daemon sogo mailgraph
+			for var in jetty* nginx spamassassin fuglu dovecot postfix opendkim clamav-daemon sogo mailgraph
 			do
 				service $var stop
 				sleep 1.5
@@ -578,10 +568,10 @@ A backup will be stored in ./before_upgrade_$timestamp
 	mkdir before_upgrade_$timestamp
 	cp -R /var/www/mail/ before_upgrade_$timestamp/mail_wwwroot
 	mysqldump -u ${my_mailcowuser} -p${my_mailcowpass} ${my_mailcowdb} > backup_mailcow_db.sql 2>/dev/null
-	cp -R /etc/{postfix,dovecot,spamassassin,apache2,fuglu,mysql,php5,clamav} before_upgrade_$timestamp/
+	cp -R /etc/{postfix,dovecot,spamassassin,nginx,fuglu,mysql,php5,clamav} before_upgrade_$timestamp/
 	echo -e "$(greenb "[OK]")"
 	echo -en "\nStopping services, this may take a few seconds... \t\t"
-	for var in apache2 spamassassin fuglu dovecot postfix opendkim clamav-daemon mailgraph
+	for var in nginx spamassassin fuglu dovecot postfix opendkim clamav-daemon mailgraph
 	do
 		service $var stop > /dev/null 2>&1
 	done
