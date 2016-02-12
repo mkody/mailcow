@@ -45,6 +45,8 @@ require_once 'inc/triggers.inc.php';
 <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bootswatch/3.3.6/lumen/bootstrap.min.css">
 <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.9.4/css/bootstrap-select.min.css" rel="stylesheet" />
 <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bootstrap-slider/6.0.16/css/bootstrap-slider.min.css" rel="stylesheet" />
+<link rel="stylesheet" href="inc/languages.min.css" rel="stylesheet" />
+
 <style>
 #slider1 .slider-selection {
 	background: #FFD700;
@@ -97,10 +99,10 @@ endif;
 				if (isset($_SESSION['mailcow_locale'])) {
 				?>
 				<li class="dropdown">
-					<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false"><?=$lang['header']['locale'];?><span class="caret"></span></a>
+					<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false"><span class="lang-sm lang-lbl" lang="<?=$_SESSION['mailcow_locale'];?>"></span><span class="caret"></$
 					<ul class="dropdown-menu" role="menu">
-						<li <?=($_SESSION['mailcow_locale'] == 'de') ? 'class="active"' : ''?>><a href="?lang=de"><?=$lang['header']['locale_de'];?></a></li>
-						<li <?=($_SESSION['mailcow_locale'] == 'en') ? 'class="active"' : ''?>><a href="?lang=en"><?=$lang['header']['locale_en'];?></a></li>
+						<li <?=($_SESSION['mailcow_locale'] == 'de') ? 'class="active"' : ''?>> <a href="?lang=de"><span class="lang-xs lang-lbl-full" lang="de"></a></li>
+						<li <?=($_SESSION['mailcow_locale'] == 'en') ? 'class="active"' : ''?>><a href="?lang=en"><span class="lang-xs lang-lbl-full" lang="en"></a></li>
 					</ul>
 				</li>
 				<?php
