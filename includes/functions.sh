@@ -457,6 +457,7 @@ DatabaseMirror clamav.inode.at" >> /etc/clamav/freshclam.conf
 	AllowOverride All
 </Directory>
 EOL
+			sed -i "s/KeepAliveTimeout/KeepAliveTimeout 600/g" /etc/apache2/apache2.conf
 			fi
 			;;
 		sogo)
@@ -493,8 +494,11 @@ EOL
 			defaults write sogod SOGoFoldersSendEMailNotifications YES;
 			defaults write sogod SOGoLanguage English;
 			defaults write sogod SOGoMemcachedHost '127.0.0.1';
-			defaults write sogod SOGoMaximumPingInterval 3540;
-			defaults write sogod SOGoMaximumSyncInterval 3540;
+			defaults write sogod WOWatchDogRequestTimeout 10;
+			defaults write sogod SOGoMaximumPingInterval 354;
+			defaults write sogod SOGoMaximumSyncInterval 354;
+			defaults write sogod SOGoMaximumSyncResponseSize 512;
+			defaults write sogod SOGoMaximumSyncWindowSize 256;
 			defaults write sogod SOGoInternalSyncInterval 30;"
 			# ~1 for 10 users, more when AS is enabled
 			PREFORK=$(( ($(free -mt | grep Total | awk '{print $2}') - 100) / 384))
