@@ -287,7 +287,7 @@ else {
 				<input name="login_user" autocorrect="off" autocapitalize="none" type="name" id="login_user" class="form-control" required autofocus>
 			</div>
 			<div class="form-group">
-				<label for="login_user"><?=$lang['login']['password'];?>:</label>
+				<label for="pass_user"><?=$lang['login']['password'];?>:</label>
 				<input name="pass_user" type="password" id="pass_user" class="form-control" required>
 			</div>
 			<button type="submit" class="btn btn-sm btn-success" value="Login"><?=$lang['login']['login'];?></button>

@@ -219,7 +219,6 @@ DEBIAN_FRONTEND=noninteractive apt-get --force-yes -y install dovecot-common dov
 			done
 			install -m 644 postfix/conf/master.cf /etc/postfix/master.cf
 			install -m 644 postfix/conf/main.cf /etc/postfix/main.cf
-			install -o www-data -g www-data -m 644 postfix/conf/mailcow_anonymize_headers.pcre /etc/postfix/mailcow_anonymize_headers.pcre
 			install -m 644 postfix/conf/postscreen_access.cidr /etc/postfix/postscreen_access.cidr
 			sed -i "s/sys_hostname.sys_domain/${sys_hostname}.${sys_domain}/g" /etc/postfix/main.cf
 			sed -i "s/sys_domain/${sys_domain}/g" /etc/postfix/main.cf

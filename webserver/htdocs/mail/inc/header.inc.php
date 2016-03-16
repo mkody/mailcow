@@ -45,7 +45,7 @@ require_once 'inc/triggers.inc.php';
 <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bootswatch/3.3.6/lumen/bootstrap.min.css">
 <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.9.4/css/bootstrap-select.min.css" rel="stylesheet" />
 <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/bootstrap-slider/6.0.16/css/bootstrap-slider.min.css" rel="stylesheet" />
-<link rel="stylesheet" href="inc/languages.min.css" rel="stylesheet" />
+<link rel="stylesheet" href="/inc/languages.min.css" rel="stylesheet" />
 
 <style>
 #slider1 .slider-selection {

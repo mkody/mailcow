@@ -238,7 +238,7 @@ $_SESSION['return_to'] = $_SERVER['REQUEST_URI']; ?> <div class="container">
 							<?php
 							endif;
 							?>
-							<td><?=utf8_encode($row['name']);?></td>
+							<td><?=htmlspecialchars(utf8_encode($row['name']));?></td>
 							<td><?=$row['domain'];?></td>
 							<td><?=formatBytes($row['quota'], 2);?></td>
 							<td><?=formatBytes($row['bytes'], 2);?></td>
