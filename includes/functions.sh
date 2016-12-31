@@ -27,12 +27,7 @@ usage() {
 	-h | -?
 		Print this text
 
-	-u
-		Upgrade mailcow to a newer version
-
-	-U
-		Upgrade mailcow to a newer version
-		and do not ask to press any key to continue
+	-u	Upgrade mailcow to a newer version
 
 	-s	Retry to obtain Lets Encrypt certificates
 
@@ -58,7 +53,6 @@ genpasswd() {
 	done
 	echo ${pw_valid}
 }
-
 returnwait_task=""
 returnwait() {
 	if [[ ! -z "${returnwait_task}" ]]; then
@@ -81,9 +75,10 @@ checksystem() {
 }
 
 checkports() {
-	if [[ -z $(which mysql) ]] || [[ -z $(which dig) ]] || [[ -z $(which nc) ]]; then
+	if [[ -z $(which mysql) || -z $(which dig) || -z $(which nc) ]]; then
 		echo "$(textb [INFO]) - Installing prerequisites for DNS and port checks"
-		apt-get -y update > /dev/null ; apt-get -y install curl nc dnsutils mysql-client > /dev/null 2>&1
+		apt-get -y update > /dev/null
+		apt-get -y install curl netcat-traditional dnsutils mysql-client > /dev/null 2>&1
 	fi
 	for port in 25 143 465 587 993 995 8983
 	do
@@ -127,8 +122,12 @@ checkconfig() {
 		echo "$(redb [ERR]) - \"mailing_platform\" is neither sogo nor roundcube"
 		exit 1
 	fi
-	if [[ ${mailing_platform} == "sogo" && ${my_usemariadb} == "yes" ]]; then
-		echo "$(redb [ERR]) - Cannot use MariaDB with SOGo"
+	#if [[ ${mailing_platform} == "sogo" && ${my_usemariadb} == "yes" ]]; then
+	#	echo "$(redb [ERR]) - Cannot use MariaDB with SOGo"
+	#	exit 1
+	#fi
+	if [[ ${mailing_platform} == "sogo" && $(arch) != "x86_64" ]]; then
+		echo "$(redb [ERR]) - Cannot install SOGo on $(arch) hardware, need x86_64"
 		exit 1
 	fi
 	for var in sys_hostname sys_domain sys_timezone my_dbhost my_mailcowdb my_mailcowuser my_mailcowpass my_rootpw my_rcuser my_rcpass my_rcdb mailcow_admin_user mailcow_admin_pass
@@ -248,16 +247,16 @@ installtask() {
 				DATABASE_BACKEND=""
 			fi
 			[[ -z ${APT} ]] && APT="apt-get --force-yes"
-DEBIAN_FRONTEND=noninteractive ${APT} -y install zip dnsutils python-setuptools libmail-spf-perl libmail-dkim-perl file \
+DEBIAN_FRONTEND=noninteractive ${APT} -y install dnsutils sudo zip bzip2 unzip unrar-free curl rrdtool mailgraph fcgiwrap spawn-fcgi python-setuptools libmail-spf-perl libmail-dkim-perl file bsd-mailx \
 openssl php-auth-sasl php-http-request php-mail php-mail-mime php-mail-mimedecode php-net-dime php-net-smtp \
-php-net-socket php-net-url php-pear php-soap ${PHP} ${PHP}-cli ${PHP}-common ${PHP}-curl ${PHP}-gd ${PHP}-imap subversion \
-${PHP}-intl ${PHP}-xsl libawl-php ${PHP}-mcrypt ${PHP}-mysql libawl-php ${PHP}-xmlrpc ${DATABASE_BACKEND} ${WEBSERVER_BACKEND} mailutils pyzor razor \
-postfix postfix-mysql postfix-pcre postgrey pflogsumm spamassassin spamc sudo bzip2 curl mpack opendkim opendkim-tools unzip clamav-daemon \
-python-magic unrar-free liblockfile-simple-perl libdbi-perl libmime-base64-urlsafe-perl libtest-tempdir-perl liblogger-syslog-perl bsd-mailx \
-${OPENJDK}-jre-headless libcurl4-openssl-dev libexpat1-dev rrdtool mailgraph fcgiwrap spawn-fcgi \
-solr-jetty > /dev/null
+php-net-socket php-net-url php-pear php-soap ${PHP} ${PHP}-cli ${PHP}-common ${PHP}-curl ${PHP}-gd ${PHP}-imap \
+${PHP}-intl ${PHP}-xsl ${PHP}-mcrypt ${PHP}-mysql libawl-php ${PHP}-xmlrpc ${DATABASE_BACKEND} ${WEBSERVER_BACKEND} mailutils pyzor razor \
+postfix postfix-mysql postfix-pcre postgrey pflogsumm spamassassin spamc sa-compile libdbd-mysql-perl opendkim opendkim-tools clamav-daemon \
+python-magic liblockfile-simple-perl libdbi-perl libmime-base64-urlsafe-perl libtest-tempdir-perl liblogger-syslog-perl \
+${OPENJDK}-jre-headless libcurl4-openssl-dev libexpat1-dev solr-jetty > /dev/null
 			if [ "$?" -ne "0" ]; then
-				echo "$(redb [ERR]) - Package installation failed"
+				echo "$(redb [ERR]) - Package installation failed:"
+				tail -n 20 /var/log/dpkg.log
 				exit 1
 			fi
 			update-alternatives --set mailx /usr/bin/bsd-mailx --quiet > /dev/null 2>&1
@@ -283,32 +282,46 @@ DEBIAN_FRONTEND=noninteractive ${APT} -y install dovecot-common dovecot-core dov
 			mkdir /etc/ssl/mail 2> /dev/null
 			echo "$(textb [INFO]) - Generating 2048 bit DH parameters, this may take a while, please wait..."
 			openssl dhparam -out /etc/ssl/mail/dhparams.pem 4096 2> /dev/null
-			openssl req -new -newkey rsa:4096 -sha256 -days 1095 -nodes -x509 -subj "/C=ZZ/ST=mailcow/L=mailcow/O=mailcow/CN=${sys_hostname}.${sys_domain}/subjectAltName=DNS.1=${sys_hostname}.${sys_domain},DNS.2=autodiscover.{sys_domain}" -keyout /etc/ssl/mail/mail.key -out /etc/ssl/mail/mail.crt
+			openssl req -new -newkey rsa:4096 -sha256 -days 1095 -nodes -x509 -subj "/C=ZZ/ST=mailcow/L=mailcow/O=mailcow/CN=${sys_hostname}.${sys_domain}/subjectAltName=DNS.1=${sys_hostname}.${sys_domain},DNS.2=autodiscover.${sys_domain}" -keyout /etc/ssl/mail/mail.key -out /etc/ssl/mail/mail.crt
 			chmod 600 /etc/ssl/mail/mail.key
 			cp /etc/ssl/mail/mail.crt /usr/local/share/ca-certificates/
 			update-ca-certificates
 			;;
 		ssl_le)
 			curled_ip="$(curl -4s ifconfig.co)"
-			for ip in  $(dig ${sys_hostname}.${sys_domain} a +short)
+			for ip in $(dig ${sys_hostname}.${sys_domain} a +short)
 			do
 				if [[ "${ip}" == "${curled_ip}" ]]; then
-					ip_useable=1
+					ip_fqdn_useable=1
 				fi
 			done
-			if [[ ${ip_useable} -ne 1 ]]; then
-				echo "$(redb [ERR]) - Cannot validate IP address against DNS"
-				echo "You can retry to obtain Let's Encrypt certificates after fixing this error by running ./install.sh -s"
+			for ip in $(dig autodiscover.${sys_domain} a +short)
+			do
+				if [[ "${ip}" == "${curled_ip}" ]]; then
+					ip_as_useable=1
+				fi
+			done
+			if [[ ${ip_fqdn_useable} -ne 1 ]]; then
+				echo "$(redb [ERR]) - Cannot validate IP address against hostname ${sys_hostname}.${sys_domain}"
+				echo "You can retry to obtain Let's Encrypt certificates by running ./install.sh -s"
+			elif [[ ${mailing_platform} == "sogo" && ${ip_as_useable} -ne 1 ]]; then
+				echo "$(redb [ERR]) - Cannot validate IP address against hostname autodiscover.${sys_domain}"
+				echo "You can retry to obtain Let's Encrypt certificates by running ./install.sh -s"
 			else
 				mkdir -p /opt/letsencrypt-sh/
 				mkdir -p "/var/www/mail/.well-known/acme-challenge"
 				tar xf letsencrypt-sh/inst/${letsencrypt_sh_version}.tar -C letsencrypt-sh/inst/ 2> /dev/null
 				cp -R letsencrypt-sh/inst/${letsencrypt_sh_version}/* /opt/letsencrypt-sh/
 				install -m 644 letsencrypt-sh/conf/config.sh /opt/letsencrypt-sh/config.sh
-				install -m 644 letsencrypt-sh/conf/domains.txt /etc/ssl/mail/domains.txt
-				sed -i "s/MAILCOW_HOST.MAILCOW_DOMAIN/${sys_hostname}.${sys_domain}/g" /etc/ssl/mail/domains.txt
+				if [[ ${mailing_platform} == "sogo" ]]; then
+					echo "${sys_hostname}.${sys_domain} autodiscover.${sys_domain}" > /etc/ssl/mail/domains.txt
+				else
+					echo "${sys_hostname}.${sys_domain}" > /etc/ssl/mail/domains.txt
+				fi
 				# Set postmaster as certificate owner
 				sed -i "s/MAILCOW_DOMAIN/${sys_domain}/g" /opt/letsencrypt-sh/config.sh
+				# letsencrypt-sh will use config instead of config.sh for versions >= 0.2.0
+				cp /opt/letsencrypt-sh/config.sh /opt/letsencrypt-sh/config
 				install -m 755 letsencrypt-sh/conf/le-renew /etc/cron.weekly/le-renew
 				rm -rf letsencrypt-sh/inst/${letsencrypt_sh_version}
 				/etc/cron.weekly/le-renew
@@ -325,9 +338,15 @@ DEBIAN_FRONTEND=noninteractive ${APT} -y install dovecot-common dovecot-core dov
 			if [[ ${mysql_useable} -ne 1 ]]; then
 				if [[ ! -z $(mysql --version | grep '5.7') ]]; then
 					# MySQL >= 5.7 uses auth_socket when installing without password (like we do)
-					mysql --defaults-file=/etc/mysql/debian.cnf -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '${my_rootpw}'; FLUSH PRIVILEGES;"
+					for host in $(mysql --defaults-file=/etc/mysql/debian.cnf mysql -e "select Host from user where User='root';" -BN); do
+						mysql --defaults-file=/etc/mysql/debian.cnf -e "ALTER USER 'root'@'${host}' IDENTIFIED WITH mysql_native_password BY '${my_rootpw}';"
+					done
+					mysql --defaults-file=/etc/mysql/debian.cnf -e "FLUSH PRIVILEGES;"
 				else
-					mysql --defaults-file=/etc/mysql/debian.cnf -e "SET PASSWORD FOR 'root'@'localhost' = PASSWORD('${my_rootpw}'); FLUSH PRIVILEGES;"
+					for host in $(mysql --defaults-file=/etc/mysql/debian.cnf mysql -e "select Host from user where User='root';" -BN); do
+						mysql --defaults-file=/etc/mysql/debian.cnf -e "SET PASSWORD FOR 'root'@'${host}' = PASSWORD('${my_rootpw}');"
+					done
+					mysql --defaults-file=/etc/mysql/debian.cnf -e "FLUSH PRIVILEGES;"
 				fi
 			fi
 			SQLCMDARRAY=(
@@ -361,6 +380,7 @@ DEBIAN_FRONTEND=noninteractive ${APT} -y install dovecot-common dovecot-core dov
 			install -m 644 postfix/conf/master.cf /etc/postfix/master.cf
 			install -m 644 postfix/conf/main.cf /etc/postfix/main.cf
 			install -o www-data -g www-data -m 644 postfix/conf/mailcow_anonymize_headers.pcre /etc/postfix/mailcow_anonymize_headers.pcre
+			install -o www-data -g www-data -m 644 postfix/conf/mailcow_anonymize_headers.pcre /etc/postfix/mailcow_anonymize_headers.pcre.template
 			install -m 644 postfix/conf/postscreen_access.cidr /etc/postfix/postscreen_access.cidr
 			install -m 644 postfix/conf/smtp_dsn_filter.pcre /etc/postfix/smtp_dsn_filter.pcre
 			sed -i "s/sys_hostname.sys_domain/${sys_hostname}.${sys_domain}/g" /etc/postfix/main.cf
@@ -527,7 +547,7 @@ DEBIAN_FRONTEND=noninteractive ${APT} -y install dovecot-common dovecot-core dov
 			if [[ ! -f /etc/spamassassin/local.cf.include ]]; then
                         	cp spamassassin/conf/local.cf.include /etc/spamassassin/local.cf.include
                         fi
-			sed -i '/^OPTIONS=/s/=.*/="--create-prefs --max-children 5 --helper-home-dir --username debian-spamd --socketpath \/var\/run\/spamd.sock --socketowner debian-spamd --socketgroup debian-spamd"/' /etc/default/spamassassin
+			sed -i '/^OPTIONS=/s/=.*/="--create-prefs --max-children 5 --helper-home-dir --username debian-spamd --socketpath \/var\/run\/spamd.sock --socketowner debian-spamd --socketgroup debian-spamd --sql-config --nouser-config"/' /etc/default/spamassassin
 			sed -i '/^CRON=/s/=.*/="1"/' /etc/default/spamassassin
 			sed -i '/^ENABLED=/s/=.*/="1"/' /etc/default/spamassassin
 			sed -i "s/my_mailcowpass/${my_mailcowpass}/g" /etc/spamassassin/local.cf
@@ -565,7 +585,7 @@ DEBIAN_FRONTEND=noninteractive ${APT} -y install dovecot-common dovecot-core dov
 				[[ ! -z $(grep "server_names_hash_bucket_size" /etc/nginx/nginx.conf) ]] && \
 					sed -i "/server_names_hash_bucket_size/c\ \ \ \ \ \ \ \ server_names_hash_bucket_size 64;" /etc/nginx/nginx.conf || \
 					sed -i "/http {/a\ \ \ \ \ \ \ \ server_names_hash_bucket_size 64;" /etc/nginx/nginx.conf
-				sed -i "s/MAILCOW_HOST.MAILCOW_DOMAIN;/${sys_hostname}.${sys_domain};/g" /etc/nginx/sites-available/mailcow.conf
+				sed -i "s/MAILCOW_HOST.MAILCOW_DOMAIN/${sys_hostname}.${sys_domain}/g" /etc/nginx/sites-available/mailcow.conf
 				sed -i "s/MAILCOW_DOMAIN;/${sys_domain};/g" /etc/nginx/sites-available/mailcow.conf
 			elif [[ ${httpd_platform} == "apache2" ]]; then
 				rm /etc/apache2/sites-enabled/*mailcow* 2>/dev/null
@@ -581,18 +601,28 @@ DEBIAN_FRONTEND=noninteractive ${APT} -y install dovecot-common dovecot-core dov
 			find /var/www/mail -type d -exec chmod 755 {} \;
 			find /var/www/mail -type f -exec chmod 644 {} \;
 			echo none > /var/log/pflogsumm.log
+			if [[ ${mailing_platform} == "sogo" ]]; then
+				mv /var/www/mail/autoconfig/mail/{config-v1.1.xml_sogo,config-v1.1.xml}
+			else
+				mv /var/www/mail/autoconfig/mail/{config-v1.1.xml_rc,config-v1.1.xml}
+			fi
+			sed -i "s/MAILCOW_HOST.MAILCOW_DOMAIN/${sys_hostname}.${sys_domain}/g" /var/www/mail/autoconfig/mail/config-v1.1.xml /var/www/mail/autodiscover.php
+			sed -i "s/MAILCOW_DOMAIN/${sys_domain}/g" /var/www/mail/autoconfig/mail/config-v1.1.xml /var/www/mail/autodiscover.php
 			sed -i "s/my_dbhost/${my_dbhost}/g" /var/www/mail/inc/vars.inc.php
 			sed -i "s/my_mailcowpass/${my_mailcowpass}/g" /var/www/mail/inc/vars.inc.php
 			sed -i "s/my_mailcowuser/${my_mailcowuser}/g" /var/www/mail/inc/vars.inc.php
 			sed -i "s/my_mailcowdb/${my_mailcowdb}/g" /var/www/mail/inc/vars.inc.php
 			sed -i "s/MAILCOW_HASHING/${hashing_method}/g" /var/www/mail/inc/vars.inc.php
-			chown -R www-data: /var/www/{.,mail} ${PHPLIB}/sessions
+			if [[ ! -f "/var/www/mail/inc/vars.local.inc.php" ]]; then
+   				echo -e "<?php\n// Custom vars file\n?>" > "/var/www/mail/inc/vars.local.inc.php"
+		        fi
+			chown -R www-data: /var/www/mail/. ${PHPLIB}/sessions
 			mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} < webserver/htdocs/init.sql
 			if [[ -z $(mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -e "SHOW COLUMNS FROM domain LIKE 'relay_all_recipients';" -N -B) ]]; then
 				mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -e "ALTER TABLE domain ADD relay_all_recipients tinyint(1) NOT NULL DEFAULT '0';" -N -B
 			fi
 			if [[ -z $(mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -e "SHOW COLUMNS FROM mailbox LIKE 'tls_enforce_in';" -N -B) ]]; then
-				mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -e "ALTER TABLE domain ADD tls_enforce_in tinyint(1) NOT NULL DEFAULT '0';" -N -B
+				mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -e "ALTER TABLE mailbox ADD tls_enforce_in tinyint(1) NOT NULL DEFAULT '0';" -N -B
 				mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -e "ALTER TABLE mailbox ADD tls_enforce_out tinyint(1) NOT NULL DEFAULT '0';" -N -B
 			fi
 			mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -e "DELETE FROM spamalias"
@@ -626,26 +656,24 @@ DEBIAN_FRONTEND=noninteractive ${APT} -y install dovecot-common dovecot-core dov
 			rm -rf roundcube/inst/${roundcube_version}
 			rm -rf /var/www/mail/rc/installer/
 			;;
-                sogo)
-			if [[ -z $(mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -e "SHOW TABLES LIKE 'sogo_view'" -N -B) ]]; then
-				mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} -e "CREATE VIEW sogo_view (c_uid, c_name, c_password, c_cn, mail, home) AS SELECT username, username, password, CONVERT(name USING latin1), username, CONCAT('/var/vmail/', maildir) FROM mailbox WHERE active=1;" -N -B
-			fi
+		sogo)
+			mysql --host ${my_dbhost} -u root -p${my_rootpw} ${my_mailcowdb} < webserver/htdocs/sogo.sql
 			if [[ $dist_id == "Debian" ]]; then
 				if [[ $dist_codename == "jessie" ]]; then
 					echo "$(textb [INFO]) - Adding official SOGo repository..."
-					echo "deb http://inverse.ca/debian-v3 jessie jessie" > /etc/apt/sources.list.d/sogo.list
+					echo "deb http://packages.inverse.ca/SOGo/nightly/3/debian/ jessie jessie" > /etc/apt/sources.list.d/sogo.list
 					apt-key adv --keyserver keys.gnupg.net --recv-key 0x810273C4 > /dev/null 2>&1
 					apt-get -y update >/dev/null
 				fi
 			elif [[ $dist_id == "Ubuntu" ]]; then
 				if [[ $dist_codename == "trusty" ]]; then
 					echo "$(textb [INFO]) - Adding official SOGo repository..."
-					echo "deb http://inverse.ca/ubuntu-v3 trusty trusty" > /etc/apt/sources.list.d/sogo.list
+					echo "deb http://packages.inverse.ca/SOGo/nightly/3/ubuntu/ trusty trusty" > /etc/apt/sources.list.d/sogo.list
 					apt-key adv --keyserver keys.gnupg.net --recv-key 0x810273C4 > /dev/null 2>&1
 					apt-get -y update >/dev/null
 				elif [[ $dist_codename == "xenial" ]]; then
 					echo "$(textb [INFO]) - Adding official SOGo repository..."
-					echo "deb http://inverse.ca/ubuntu-v3 xenial xenial" > /etc/apt/sources.list.d/sogo.list
+					echo "deb http://packages.inverse.ca/SOGo/nightly/3/ubuntu/ xenial xenial" > /etc/apt/sources.list.d/sogo.list
 					apt-key adv --keyserver keys.gnupg.net --recv-key 0x810273C4 > /dev/null 2>&1
 					apt-get -y update >/dev/null
 				fi
@@ -653,11 +681,12 @@ DEBIAN_FRONTEND=noninteractive ${APT} -y install dovecot-common dovecot-core dov
 			echo "$(textb [INFO]) - Installing SOGo packages, please stand by."
 			${APT} -y install sogo sogo-activesync libwbxml2-0 memcached
 			sudo -u sogo bash -c "
-			defaults write sogod SOGoUserSources '({type = sql;id = directory;viewURL = mysql://${my_mailcowuser}:${my_mailcowpass}@${my_dbhost}:3306/${my_mailcowdb}/sogo_view;canAuthenticate = YES;isAddressBook = YES;displayName = \"Global Address Book\";userPasswordAlgorithm = ssha256;})'
+			defaults write sogod SOGoUserSources '({type = sql;id = directory;viewURL = mysql://${my_mailcowuser}:${my_mailcowpass}@${my_dbhost}:3306/${my_mailcowdb}/sogo_view;canAuthenticate = YES;isAddressBook = YES;displayName = \"Global Address Book\";MailFieldNames = (aliases, ad_aliases, senderacl);userPasswordAlgorithm = ssha256;})'
 			defaults write sogod SOGoProfileURL 'mysql://${my_mailcowuser}:${my_mailcowpass}@${my_dbhost}:3306/${my_mailcowdb}/sogo_user_profile'
 			defaults write sogod OCSFolderInfoURL 'mysql://${my_mailcowuser}:${my_mailcowpass}@${my_dbhost}:3306/${my_mailcowdb}/sogo_folder_info'
 			defaults write sogod OCSEMailAlarmsFolderURL 'mysql://${my_mailcowuser}:${my_mailcowpass}@${my_dbhost}:3306/${my_mailcowdb}/sogo_alarms_folder'
 			defaults write sogod OCSSessionsFolderURL 'mysql://${my_mailcowuser}:${my_mailcowpass}@${my_dbhost}:3306/${my_mailcowdb}/sogo_sessions_folder'
+			defaults write sogod SOGoCalendarDefaultRoles '("PublicDAndTViewer","ConfidentialDAndTViewer","PrivateDAndTViewer")'
 			defaults write sogod SOGoEnableEMailAlarms YES
 			defaults write sogod SOGoPageTitle '${sys_hostname}.${sys_domain}';
 			defaults write sogod SOGoForwardEnabled YES;
@@ -673,6 +702,7 @@ DEBIAN_FRONTEND=noninteractive ${APT} -y install dovecot-common dovecot-core dov
 			defaults write sogod SOGoTrashFolderName Trash;
 			defaults write sogod SOGoIMAPServer 'imap://127.0.0.1:143/';
 			defaults write sogod SOGoSMTPServer 127.0.0.1:588;
+			defaults write sogod SOGoSieveFolderEncoding = 'UTF-8';
 			defaults write sogod SOGoMailingMechanism smtp;
 			defaults write sogod SOGoMailCustomFromEnabled YES;
 			defaults write sogod SOGoPasswordChangeEnabled NO;
@@ -682,19 +712,28 @@ DEBIAN_FRONTEND=noninteractive ${APT} -y install dovecot-common dovecot-core dov
 			defaults write sogod SOGoLanguage English;
 			defaults write sogod SOGoMemcachedHost '127.0.0.1';
 			defaults write sogod WOListenQueueSize 300;
+			defaults write sogod WOPidFile = '/var/run/sogo.pid';
 			defaults write sogod WOWatchDogRequestTimeout 10;
+			defaults write sogod NGImap4ConnectionStringSeparator = '/';
 			defaults write sogod SOGoMaximumPingInterval 354;
 			defaults write sogod SOGoMaximumSyncInterval 354;
 			defaults write sogod SOGoMaximumSyncResponseSize 1024;
 			defaults write sogod SOGoMaximumSyncWindowSize 15480;
 			defaults write sogod SOGoInternalSyncInterval 30;"
 			# ~1 for 10 users, more when AS is enabled - 384M is the absolute max. it may reach
-			PREFORK=$(( ($(free -mt | grep Total | awk '{print $2}') - 100) / 384 * 5 ))
+			# Set static worker count as workaround
+			#PREFORK=$(( ($(free -mt | tail -1 | awk '{print $2}') - 100) / 384 * 5 ))
+			PREFORK="15"
+			#[[ ${PREFORK} -eq 0 ]] && PREFORK="5"
 			sed -i "/PREFORK/c\PREFORK=${PREFORK}" /etc/default/sogo
 			sed -i '/SHOWWARNING/c\SHOWWARNING=false' /etc/tmpreaper.conf
 			sed -i '/expire-autoreply/s/^#//g' /etc/cron.d/sogo
 			sed -i '/expire-sessions/s/^#//g' /etc/cron.d/sogo
 			sed -i '/ealarms-notify/s/^#//g' /etc/cron.d/sogo
+			if [[ ${httpd_platform} == "apache2" ]]; then
+				a2disconf SOGo
+				cat /dev/null > /etc/apache2/conf-available/SOGo.conf
+			fi
 			;;
 		restartservices)
 			[[ -f /lib/systemd/systemd ]] && echo "$(textb [INFO]) - Restarting services, this may take a few seconds..."
@@ -806,7 +845,7 @@ A backup will be stored in ./before_upgrade_${timestamp}
 		[[ -d "${dir}" ]] && cp -R "/etc/${dir}/" "before_upgrade_${timestamp}/"
 	done
 	echo -e "$(greenb "[OK]")"
-	echo -en "\nStopping services, this may take a few seconds... \t\t"
+	echo -en "Stopping services, this may take a few seconds... \t\t"
 	if [[ ${httpd_platform} == "nginx" ]]; then
 		FPM="${PHPSVC}"
 	else
@@ -831,12 +870,12 @@ A backup will be stored in ./before_upgrade_${timestamp}
 	returnwait "Package installation"
 	installtask installpackages
 
-	PF_RR_BEFORE=$(postconf smtpd_recipient_restrictions 2> /dev/null)
-	PF_SR_BEFORE=$(postconf smtpd_sender_restrictions 2> /dev/null)
+	#PF_RR_BEFORE=$(postconf smtpd_recipient_restrictions 2> /dev/null)
+	#PF_SR_BEFORE=$(postconf smtpd_sender_restrictions 2> /dev/null)
 	returnwait "Postfix configuration"
 	installtask postfix
-	postconf -e "${PF_RR_BEFORE}"
-	postconf -e "${PF_SR_BEFORE}"
+	#postconf -e "${PF_RR_BEFORE}"
+	#postconf -e "${PF_SR_BEFORE}"
 
 	returnwait "Dovecot configuration"
 	installtask dovecot
@@ -851,8 +890,8 @@ A backup will be stored in ./before_upgrade_${timestamp}
 	installtask spamassassin
 
 	returnwait "Webserver configuration"
-	mv /var/www/PFLOG /var/log/pflogsumm.log 2> /dev/null
 	installtask webserver
+	mv /var/www/PFLOG /var/log/pflogsumm.log 2> /dev/null
 
 	if [[ ${mailing_platform} == "roundcube" ]]; then
 		returnwait "Roundcube configuration"

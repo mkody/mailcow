@@ -1,4 +1,10 @@
 <?php
+require_once("inc/prerequisites.inc.php");
+$AuthUsers = array("admin", "domainadmin");
+if (!isset($_SESSION['mailcow_cc_role']) OR !in_array($_SESSION['mailcow_cc_role'], $AuthUsers)) {
+	header('Location: /');
+	exit();
+}
 require_once("inc/header.inc.php");
 ?>
 <div class="container">
@@ -6,7 +12,7 @@ require_once("inc/header.inc.php");
 		<div class="col-md-12">
 			<div class="panel panel-default">
 				<div class="panel-heading">
-					<h3 class="panel-title"><?=$lang['add']['object'];?></h3>
+					<h3 class="panel-title"><?=$lang['add']['title'];?></h3>
 				</div>
 				<div class="panel-body">
 <?php
@@ -14,7 +20,7 @@ if (isset($_SESSION['mailcow_cc_role']) && ($_SESSION['mailcow_cc_role'] == "adm
 	if (isset($_GET['domain']) && $_SESSION['mailcow_cc_role'] == "admin") {
 ?>
 				<h4><?=$lang['add']['domain'];?></h4>
-				<form class="form-horizontal" role="form" method="post">
+				<form class="form-horizontal" role="form" method="post" action="<?=($FORM_ACTION == "previous") ? $_SESSION['return_to'] : null;?>">
 					<div class="form-group">
 						<label class="control-label col-sm-2" for="domain"><?=$lang['add']['domain'];?>:</label>
 						<div class="col-sm-10">
@@ -48,7 +54,7 @@ if (isset($_SESSION['mailcow_cc_role']) && ($_SESSION['mailcow_cc_role'] == "adm
 					<div class="form-group">
 						<label class="control-label col-sm-2" for="quota"><?=$lang['add']['domain_quota_m'];?></label>
 						<div class="col-sm-10">
-						<input type="number" class="form-control" name="quota" id="quota" value="15360">
+						<input type="number" class="form-control" name="quota" id="quota" value="10240">
 						</div>
 					</div>
 					<div class="form-group">
@@ -81,18 +87,18 @@ if (isset($_SESSION['mailcow_cc_role']) && ($_SESSION['mailcow_cc_role'] == "adm
 ?>
 				<h4><?=$lang['add']['alias'];?></h4>
 				<p><?=$lang['add']['alias_spf_fail'];?></p>
-				<form class="form-horizontal" role="form" method="post">
+				<form class="form-horizontal" role="form" method="post" action="<?=($FORM_ACTION == "previous") ? $_SESSION['return_to'] : null;?>">
 					<div class="form-group">
 						<label class="control-label col-sm-2" for="address"><?=$lang['add']['alias_address'];?></label>
 						<div class="col-sm-10">
-							<textarea autocorrect="off" autocapitalize="none" class="form-control" rows="5" name="address"></textarea>
+							<textarea autocorrect="off" autocapitalize="none" class="form-control" rows="5" name="address" id="address"></textarea>
 							<p><?=$lang['add']['alias_address_info'];?></p>
 						</div>
 					</div>
 					<div class="form-group">
 						<label class="control-label col-sm-2" for="goto"><?=$lang['add']['target_address'];?></label>
 						<div class="col-sm-10">
-							<textarea autocorrect="off" autocapitalize="none" class="form-control" rows="5" name="goto"></textarea>
+							<textarea autocorrect="off" autocapitalize="none" class="form-control" rows="5" id="goto" name="goto"></textarea>
 							<p><?=$lang['add']['target_address_info'];?></p>
 						</div>
 					</div>
@@ -114,30 +120,38 @@ if (isset($_SESSION['mailcow_cc_role']) && ($_SESSION['mailcow_cc_role'] == "adm
 	elseif (isset($_GET['aliasdomain'])) {
 	?>
 				<h4><?=$lang['add']['alias_domain'];?></h4>
-				<form class="form-horizontal" role="form" method="post">
+				<form class="form-horizontal" role="form" method="post" action="<?=($FORM_ACTION == "previous") ? $_SESSION['return_to'] : null;?>">
 					<div class="form-group">
 						<label class="control-label col-sm-2" for="alias_domain"><?=$lang['add']['alias_domain'];?></label>
 						<div class="col-sm-10">
-							<textarea autocorrect="off" autocapitalize="none" class="form-control" rows="5" name="alias_domain"></textarea>
+							<textarea autocorrect="off" autocapitalize="none" class="form-control" rows="5" name="alias_domain" id="alias_domain"></textarea>
 							<p><?=$lang['add']['alias_domain_info'];?></p>
 						</div>
 					</div>
 					<div class="form-group">
-						<label class="control-label col-sm-2" for="name"><?=$lang['add']['target_domain'];?></label>
+						<label class="control-label col-sm-2" for="target_domain"><?=$lang['add']['target_domain'];?></label>
 						<div class="col-sm-10">
-							<select name="target_domain" title="<?=$lang['add']['select'];?>">
+							<select name="target_domain" id="target_domain" title="<?=$lang['add']['select'];?>">
 								<?php
-								$stmt = $pdo->prepare("SELECT `domain` FROM `domain`
-										WHERE `domain` IN (
-												SELECT `domain` FROM `domain_admins`
-														WHERE `username`= :username
-														AND active='1'
-												)
-										OR 'admin' = :admin");
-								$stmt->execute(array(':username' => $_SESSION['mailcow_cc_username'], ':admin' => $_SESSION['mailcow_cc_role']));
-								$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+								try {
+									$stmt = $pdo->prepare("SELECT `domain` FROM `domain`
+											WHERE `domain` IN (
+													SELECT `domain` FROM `domain_admins`
+															WHERE `username`= :username
+															AND `active`='1'
+													)
+											OR 'admin' = :admin");
+									$stmt->execute(array(':username' => $_SESSION['mailcow_cc_username'], ':admin' => $_SESSION['mailcow_cc_role']));
+									$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+								}
+								catch(PDOException $e) {
+									$_SESSION['return'] = array(
+										'type' => 'danger',
+										'msg' => 'MySQL: '.$e
+									);
+								}
 								while ($row = array_shift($rows)) {
-										echo "<option>".$row['domain']."</option>";
+										echo "<option>".htmlspecialchars($row['domain'])."</option>";
 								}
 								?>
 							</select>
@@ -161,29 +175,37 @@ if (isset($_SESSION['mailcow_cc_role']) && ($_SESSION['mailcow_cc_role'] == "adm
 	elseif (isset($_GET['mailbox'])) {
 	?>
 				<h4><?=$lang['add']['mailbox'];?></h4>
-				<form class="form-horizontal" role="form" method="post">
+				<form class="form-horizontal" role="form" method="post" action="<?=($FORM_ACTION == "previous") ? $_SESSION['return_to'] : null;?>">
 					<div class="form-group">
 						<label class="control-label col-sm-2" for="local_part"><?=$lang['add']['mailbox_username'];?></label>
 						<div class="col-sm-10">
-							<input type="text" autocorrect="off" autocapitalize="none" class="form-control" name="local_part" id="local_part" required>
+							<input type="text" pattern="[A-Za-z0-9\.!#$%&'*+/=?^_`{|}~-]+" autocorrect="off" autocapitalize="none" class="form-control" name="local_part" id="local_part" required>
 						</div>
 					</div>
 					<div class="form-group">
-						<label class="control-label col-sm-2" for="name"><?=$lang['add']['domain'];?>:</label>
+						<label class="control-label col-sm-2" for="domain"><?=$lang['add']['domain'];?>:</label>
 						<div class="col-sm-10">
-							<select name="domain" title="<?=$lang['add']['select'];?>">
+							<select id="addSelectDomain" name="domain" id="domain" title="<?=$lang['add']['select'];?>" required>
 							<?php
-							$stmt = $pdo->prepare("SELECT `domain` FROM `domain`
-									WHERE `domain` IN (
+							try {
+								$stmt = $pdo->prepare("SELECT `domain` FROM `domain`
+										WHERE `domain` IN (
 											SELECT `domain` FROM `domain_admins`
 													WHERE `username`= :username
-													AND active='1'
+													AND `active`='1'
 											)
-									OR 'admin' = :admin");
-							$stmt->execute(array(':username' => $_SESSION['mailcow_cc_username'], ':admin' => $_SESSION['mailcow_cc_role']));
-							$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+											OR 'admin' = :admin");
+								$stmt->execute(array(':username' => $_SESSION['mailcow_cc_username'], ':admin' => $_SESSION['mailcow_cc_role']));
+								$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+							}
+							catch(PDOException $e) {
+								$_SESSION['return'] = array(
+									'type' => 'danger',
+									'msg' => 'MySQL: '.$e
+								);
+							}
 							while ($row = array_shift($rows)) {
-								echo "<option>".$row['domain']."</option>";
+								echo "<option>".htmlspecialchars($row['domain'])."</option>";
 							}
 							?>
 							</select>
@@ -196,9 +218,11 @@ if (isset($_SESSION['mailcow_cc_role']) && ($_SESSION['mailcow_cc_role'] == "adm
 						</div>
 					</div>
 					<div class="form-group">
-						<label class="control-label col-sm-2" for="quota"><?=$lang['add']['quota_mb'];?></label>
+						<label class="control-label col-sm-2" for="addInputQuota"><?=$lang['add']['quota_mb'];?>
+							<br /><span id="quotaBadge" class="badge">max. - MiB</span>
+						</label>
 						<div class="col-sm-10">
-						<input type="number" class="form-control" name="quota" id="quota" value="1024">
+						<input type="text" class="form-control" name="quota" min="1" max="" id="addInputQuota" disabled value="<?=$lang['add']['select_domain'];?>" required>
 						</div>
 					</div>
 					<div class="form-group">
@@ -246,6 +270,7 @@ else {
 	</div>
 <a href="<?=$_SESSION['return_to'];?>">&#8592; <?=$lang['add']['previous'];?></a>
 </div> <!-- /container -->
+<script src="js/add.js"></script>
 <?php
 require_once("inc/footer.inc.php");
 ?>

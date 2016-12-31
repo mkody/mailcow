@@ -48,6 +48,16 @@ if (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == "admi
 		set_mailcow_config("ssr", $_POST);
 		postfix_reload();
 	}
+	if (isset($_POST["reset-srr"])) {
+		$_SESSION['last_expanded'] = "collapseRestrictions";
+		set_mailcow_config("reset-srr");
+		postfix_reload();
+	}
+	if (isset($_POST["reset-ssr"])) {
+		$_SESSION['last_expanded'] = "collapseRestrictions";
+		set_mailcow_config("reset-ssr");
+		postfix_reload();
+	}
 	if (isset($_POST["delete_dkim_record"])) {
 		$_SESSION['last_expanded'] = "collapseDKIM";
 		opendkim_table("delete", $_POST["delete_dkim_record"]);
@@ -58,7 +68,7 @@ if (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == "admi
 	}
 	if (isset($_POST["add_dkim_record"])) {
 		$_SESSION['last_expanded'] = "collapseDKIM";
-		opendkim_table("add", $_POST["dkim_selector"] . "_" . $_POST["dkim_domain"]);
+		opendkim_table("add", $_POST);
 	}
 	if (isset($_POST["trigger_anonymize"])) {
 		isset($_POST['anonymize']) ? $anonymize = 'on' : $anonymize = '';
@@ -114,6 +124,13 @@ if (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == "user
 	}
 }
 if (isset($_SESSION['mailcow_cc_role']) && ($_SESSION['mailcow_cc_role'] == "admin" || $_SESSION['mailcow_cc_role'] == "domainadmin")) {
+	if (isset($_GET["js"])) {
+		switch ($_GET["js"]) {
+			case "remaining_specs":
+				remaining_specs($_GET['domain'], $_GET['object'], "y");
+			break;
+		}
+	}
 	if (isset($_POST["trigger_mailbox_action"])) {
 		switch ($_POST["trigger_mailbox_action"]) {
 			case "adddomain":

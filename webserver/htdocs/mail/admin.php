@@ -1,9 +1,9 @@
 <?php
+require_once("inc/prerequisites.inc.php");
+
+if (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == "admin") {
 require_once("inc/header.inc.php");
 $_SESSION['return_to'] = $_SERVER['REQUEST_URI'];
-?>
-<?php
-if (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == 'admin') {
 ?>
 <div class="container">
 <h4><span class="glyphicon glyphicon-user" aria-hidden="true"></span> <?=$lang['admin']['access'];?></h4>
@@ -16,16 +16,24 @@ if (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == 'admi
 			<div class="panel-body">
 				<form class="form-horizontal" autocapitalize="none" autocorrect="off" role="form" method="post">
 				<?php
+				try {
 				$stmt = $pdo->prepare("SELECT `username` FROM `admin`
 					WHERE `superadmin`='1' and active='1'");
 				$stmt->execute();
 				$AdminData = $stmt->fetch(PDO::FETCH_ASSOC);
+				}
+				catch(PDOException $e) {
+					$_SESSION['return'] = array(
+						'type' => 'danger',
+						'msg' => 'MySQL: '.$e
+					);
+				}
 				?>
-					<input type="hidden" name="admin_user_now" value="<?=$AdminData['username'];?>">
+					<input type="hidden" name="admin_user_now" value="<?=htmlspecialchars($AdminData['username']);?>">
 					<div class="form-group">
 						<label class="control-label col-sm-2" for="admin_user"><?=$lang['admin']['admin'];?>:</label>
 						<div class="col-sm-10">
-							<input type="text" class="form-control" name="admin_user" id="admin_user" value="<?=$AdminData['username'];?>" required>
+							<input type="text" class="form-control" name="admin_user" id="admin_user" value="<?=htmlspecialchars($AdminData['username']);?>" required>
 							&rdsh; <kbd>a-z A-Z - _ .</kbd>
 						</div>
 					</div>
@@ -43,7 +51,7 @@ if (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == 'admi
 					</div>
 					<div class="form-group">
 						<div class="col-sm-offset-2 col-sm-10">
-							<button type="submit" name="trigger_set_admin" class="btn btn-default"><?=$lang['admin']['save'];?></button>
+							<button type="submit" name="trigger_set_admin" class="btn btn-success"><?=$lang['admin']['save'];?></button>
 						</div>
 					</div>
 				</form>
@@ -59,40 +67,74 @@ if (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == 'admi
 			<div class="panel-body">
 				<form method="post">
 					<div class="table-responsive">
-					<table class="table table-striped" id="domainadminstable">
+					<table class="table table-striped sortable-theme-bootstrap" data-sortable id="domainadminstable">
 						<thead>
 						<tr>
-							<th><?=$lang['admin']['username'];?></th>
-							<th><?=$lang['admin']['admin_domains'];?></th>
-							<th><?=$lang['admin']['active'];?></th>
-							<th><?=$lang['admin']['action'];?></th>
+							<th class="sort-table" style="min-width: 100px;"><?=$lang['admin']['username'];?></th>
+							<th class="sort-table" style="min-width: 166px;"><?=$lang['admin']['admin_domains'];?></th>
+							<th class="sort-table" style="min-width: 76px;"><?=$lang['admin']['active'];?></th>
+							<th style="text-align: right; min-width: 200px;" data-sortable="false"><?=$lang['admin']['action'];?></th>
 						</tr>
 						</thead>
 						<tbody>
 							<?php
-							$stmt = $pdo->prepare("SELECT
-								`username`, 
-								GROUP_CONCAT(`domain`) AS `domain`,
-								MAX(CASE `active` WHEN 1 THEN '".$lang['admin']['yes']."' ELSE '".$lang['admin']['no']."' END) AS `active`
-									FROM `domain_admins` 
-										WHERE `username` IN (
-											SELECT `username` FROM `admin`
-												WHERE `superadmin`!='1'
-										) GROUP BY `username`;");
-							$stmt->execute();
-							$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-							while ($row = array_shift($rows)):
+							try {
+								$stmt = $pdo->query("SELECT DISTINCT
+									`username`, 
+									CASE WHEN `active`='1' THEN '".$lang['admin']['yes']."' ELSE '".$lang['admin']['no']."' END AS `active`
+										FROM `domain_admins` 
+											WHERE `username` IN (
+												SELECT `username` FROM `admin`
+													WHERE `superadmin`!='1'
+											)");
+								$rows_username = $stmt->fetchAll(PDO::FETCH_ASSOC);
+							}
+							catch(PDOException $e) {
+								$_SESSION['return'] = array(
+									'type' => 'danger',
+									'msg' => 'MySQL: '.$e
+								);
+							}
+							if(!empty($rows_username)):
+							while ($row_user_state = array_shift($rows_username)):
 							?>
-							<tr>
-								<td><?=strtolower($row['username']);?></td>
-								<td><?=strtolower($row['domain']);?></td>
-								<td><?=$row['active'];?></td>
-								<td><a href="delete.php?domainadmin=<?=$row['username'];?>"><?=$lang['admin']['remove'];?></a> |
-									<a href="edit.php?domainadmin=<?=$row['username'];?>"><?=$lang['admin']['edit'];?></a></td>
+							<tr id="data">
+								<td><?=htmlspecialchars(strtolower($row_user_state['username']));?></td>
+								<td>
+								<?php
+								try {
+									$stmt = $pdo->prepare("SELECT `domain` FROM `domain_admins` WHERE `username` = :username");
+									$stmt->execute(array('username' => $row_user_state['username']));
+									$rows_domain = $stmt->fetchAll(PDO::FETCH_ASSOC);
+								}
+								catch(PDOException $e) {
+									$_SESSION['return'] = array(
+										'type' => 'danger',
+										'msg' => 'MySQL: '.$e
+									);
+								}
+								while ($row_domain = array_shift($rows_domain)) {
+									echo htmlspecialchars($row_domain['domain']).'<br />';
+								}
+								?>
+								</td>
+								<td><?=$row_user_state['active'];?></td>
+								<td style="text-align: right;">
+									<div class="btn-group">
+										<a href="edit.php?domainadmin=<?=$row_user_state['username'];?>" class="btn btn-xs btn-default"><span class="glyphicon glyphicon-pencil"></span> <?=$lang['admin']['edit'];?></a>
+										<a href="delete.php?domainadmin=<?=$row_user_state['username'];?>" class="btn btn-xs btn-danger"><span class="glyphicon glyphicon-trash"></span> <?=$lang['admin']['remove'];?></a>
+									</div>
+								</td>
 								</td>
 							</tr>
+
 							<?php
 							endwhile;
+							else:
+							?>
+								<tr id="no-data"><td colspan="4" style="text-align: center; font-style: italic;"><?=$lang['admin']['no_record'];?></td></tr>
+							<?php
+							endif;
 							?>
 						</tbody>
 					</table>
@@ -111,13 +153,20 @@ if (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == 'admi
 					<div class="form-group">
 						<label class="control-label col-sm-2" for="name"><?=$lang['admin']['admin_domains'];?>:</label>
 						<div class="col-sm-10">
-							<select title="Domains durchsuchen..." style="width:100%" name="domain[]" size="5" multiple>
+							<select title="<?=$lang['admin']['search_domain_da'];?>" style="width:100%" name="domain[]" size="5" multiple>
 							<?php
-							$stmt = $pdo->prepare("SELECT domain FROM domain");
-							$stmt->execute();
-							$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+							try {
+								$stmt = $pdo->query("SELECT domain FROM domain");
+								$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+							}
+							catch(PDOException $e) {
+								$_SESSION['return'] = array(
+									'type' => 'danger',
+									'msg' => 'MySQL: '.$e
+								);
+							}
 							while ($row = array_shift($rows)) {
-								echo "<option>".$row['domain']."</option>";
+								echo "<option>".htmlspecialchars($row['domain'])."</option>";
 							}
 							?>
 							</select>
@@ -144,7 +193,7 @@ if (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == 'admi
 					</div>
 					<div class="form-group">
 						<div class="col-sm-offset-2 col-sm-10">
-							<button type="submit" name="trigger_add_domain_admin" class="btn btn-default"><?=$lang['admin']['add'];?></button>
+							<button type="submit" name="trigger_add_domain_admin" class="btn btn-success"><?=$lang['admin']['add'];?></button>
 						</div>
 					</div>
 				</form>
@@ -202,7 +251,8 @@ foreach($srr_values_inactive as $srr_value) {
 		</div>
 		<div class="form-group">
 			<div class="col-sm-offset-2 col-sm-10">
-				<button type="submit" name="srr" class="btn btn-default"><?=$lang['admin']['save'];?></button>
+				<button type="submit" name="srr" class="btn btn-success"><?=$lang['admin']['save'];?></button>
+				<button type="submit" name="reset-srr" class="btn btn-primary"><?=$lang['admin']['reset_defaults'];?></button>
 			</div>
 		</div>
 	</form>
@@ -245,7 +295,8 @@ foreach($ssr_values_inactive as $ssr_value) {
 		</div>
 		<div class="form-group">
 			<div class="col-sm-offset-2 col-sm-10">
-				<button type="submit" name="ssr" class="btn btn-default"><?=$lang['admin']['save'];?></button>
+				<button type="submit" name="ssr" class="btn btn-success"><?=$lang['admin']['save'];?></button>
+				<button type="submit" name="reset-ssr" class="btn btn-primary"><?=$lang['admin']['reset_defaults'];?></button>
 			</div>
 		</div>
 	</form>
@@ -273,7 +324,7 @@ foreach($ssr_values_inactive as $ssr_value) {
 	<div class="form-group">
 		<label class="control-label col-sm-4" for="location"><?=$lang['admin']['public_folder_name'];?>:</label>
 		<div class="col-sm-8">
-		<input type="text" class="form-control" name="public_folder_name" id="public_folder_name" value="<?=return_mailcow_config("public_folder_name");?>">
+		<input type="text" class="form-control" name="public_folder_name" id="public_folder_name" value="<?=htmlspecialchars(return_mailcow_config("public_folder_name"));?>">
 		</div>
 	</div>
 	<div class="form-group">
@@ -287,7 +338,7 @@ foreach($ssr_values_inactive as $ssr_value) {
 	<div class="form-group">
 	<input type="hidden" name="trigger_public_folder">
 		<div class="col-sm-8">
-			<button type="submit" class="btn btn-default"><?=$lang['admin']['save'];?></button>
+			<button type="submit" class="btn btn-success"><?=$lang['admin']['save'];?></button>
 		</div>
 	</div>
 </form>
@@ -312,7 +363,7 @@ foreach($ssr_values_inactive as $ssr_value) {
 	</div>
 	<div class="form-group">
 		<div class="col-sm-8">
-			<button type="submit" name="trigger_anonymize" class="btn btn-default"><?=$lang['admin']['save'];?></button>
+			<button type="submit" name="trigger_anonymize" class="btn btn-success"><?=$lang['admin']['save'];?></button>
 		</div>
 	</div>
 </form>
@@ -339,7 +390,7 @@ foreach($ssr_values_inactive as $ssr_value) {
 	?>
 		<div class="row">
 			<div class="col-xs-2">
-				<p>Domain: <strong><?=explode("_", $file)[1];?></strong> (default._domainkey)</p>
+				<p>Domain: <strong><?=htmlspecialchars(explode("_", $file)[1]);?></strong> (<?=htmlspecialchars(explode("_", $file)[0]);?>._domainkey)</p>
 			</div>
 			<div class="col-xs-9">
 				<pre><?=$str;?></pre>
@@ -347,7 +398,7 @@ foreach($ssr_values_inactive as $ssr_value) {
 			<div class="col-xs-1">
 				<form class="form-inline" role="form" method="post">
 				<a href="#" onclick="$(this).closest('form').submit()"><span class="glyphicon glyphicon-remove-circle"></span></a>
-				<input type="hidden" name="delete_dkim_record" value="<?=$file;?>">
+				<input type="hidden" name="delete_dkim_record" value="<?=htmlspecialchars($file);?>">
 				</form>
 			</div>
 		</div>
@@ -364,7 +415,13 @@ foreach($ssr_values_inactive as $ssr_value) {
 			<label for="dkim_selector">Selector</label>
 			<input class="form-control" id="dkim_selector" name="dkim_selector" value="default" required>
 		</div>
-		<button type="submit" name="add_dkim_record" class="btn btn-default"><span class="glyphicon glyphicon-plus"></span> <?=$lang['admin']['add'];?></button>
+		<div class="form-group">
+			<select class="form-control" id="dkim_key_size" name="dkim_key_size" title="<?=$lang['admin']['dkim_key_length'];?>" required>
+				<option>1024</option>
+				<option>2048</option>
+			</select>
+		</div>
+		<button type="submit" name="add_dkim_record" class="btn btn-success"><span class="glyphicon glyphicon-plus"></span> <?=$lang['admin']['add'];?></button>
 	</form>
 </div>
 </div>
@@ -377,12 +434,12 @@ foreach($ssr_values_inactive as $ssr_value) {
 <div id="collapseMsgSize" class="panel-collapse collapse">
 <div class="panel-body">
 <form class="form-inline" method="post">
-	<p><?=$lang['admin']['msg_size_limit'];?>: <strong><?=return_mailcow_config("maxmsgsize");?>MB</strong></p>
+	<p><?=$lang['admin']['msg_size_limit'];?>: <strong><?=intval(return_mailcow_config("maxmsgsize"));?> MB</strong></p>
 	<p><?=$lang['admin']['msg_size_limit_details'];?></p>
 	<div class="form-group">
 		<input type="number" class="form-control" id="maxmsgsize" name="maxmsgsize" placeholder="in MB" min="1" max="250" required>
 	</div>
-	<button type="submit" class="btn btn-default"><?=$lang['admin']['save'];?></button>
+	<button type="submit" class="btn btn-success"><?=$lang['admin']['save'];?></button>
 </form>
 </div>
 </div>
@@ -398,6 +455,24 @@ foreach($ssr_values_inactive as $ssr_value) {
 	</div>
 	<div id="collapseSysinfo" class="panel-collapse collapse">
 	<div class="panel-body">
+		<legend><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> System Info</legend>
+		<div class="row">
+			<div class="col-md-6">
+				<blockquote>
+					<strong>Uptime:</strong> <?=sys_info('uptime')['days'].' <i>day(s)</i> '.sys_info('uptime')['hours'].' <i>hour(s)</i> '.sys_info('uptime')['minutes'].' <i>minute(s)</i> '?>
+				</blockquote>
+			</div>
+			<div class="col-md-6">
+				<blockquote>
+					<strong>Hostname:</strong> <?=gethostname()?>
+				</blockquote>
+			</div>
+			<div class="col-md-6">
+				<blockquote>
+					<strong>mailcow version:</strong> <?=file_get_contents("/etc/mailcow_version")?>
+				</blockquote>
+			</div>
+		</div>
 		<div class="row">
 			<div class="col-md-6">
 				<legend><span class="glyphicon glyphicon-hdd" data-toggle="tooltip" title="/var/vmail" aria-hidden="true"></span> Disk <?=formatBytes(disk_total_space('/var/vmail')-disk_free_space("/var/vmail"));?> / <?=formatBytes(disk_total_space('/var/vmail'))?></legend>
@@ -416,6 +491,12 @@ foreach($ssr_values_inactive as $ssr_value) {
 				</div>
 			</div>
 		</div>
+ 	  	<legend><span class="glyphicon glyphicon-stats" aria-hidden="true"></span> CPU <?=sys_info('cpu');?>%</legend>
+				<div class="progress">
+				  <div class="progress-bar progress-bar-info progress-bar-striped" role="progressbar" aria-valuenow="<?php echo sys_info('cpu');?>"
+				  aria-valuemin="0" aria-valuemax="100" style="width:<?=sys_info('cpu');?>%">
+				  </div>
+				</div>
 		<legend>Postqueue</legend>
 			<pre><?php echo sys_info("mailq");?></pre>
 		<legend>Pflogsumm <code>/var/log/mail.log</code></legend>
@@ -433,14 +514,14 @@ foreach($ssr_values_inactive as $ssr_value) {
 	</div>
 </div>
 </div>
-<?php
-}
-else {
-	header('Location: /');
-	die("Permission denied");
-}
-?>
 </div> <!-- /container -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js" integrity="sha384-YWP9O4NjmcGo4oEJFXvvYSEzuHIvey+LbXkBNJ1Kd0yfugEZN9NCQNpRYBVC1RvA" crossorigin="anonymous"></script>
+<script src="js/sorttable.js"></script>
+<script src="js/admin.js"></script>
 <?php
 require_once("inc/footer.inc.php");
+} else {
+	header('Location: /');
+	exit();
+}
 ?>

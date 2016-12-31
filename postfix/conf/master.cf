@@ -1,5 +1,5 @@
 # Postscreen on Port 25/tcp, filters zombies (spam machines) on first level with lowest costs.
-smtp      inet  n       -       n       -       1       postscreen
+smtp       inet  n       -       n       -       1       postscreen
 
 # Postscreen passes sane clients to the real SMTP daemon here.
 smtpd      pass  -       -       n       -       -       smtpd

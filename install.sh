@@ -8,14 +8,13 @@ cat includes/banner
 source includes/versions
 source includes/functions.sh
 
-while getopts suhUH:D:? par; do
+while getopts suhH:D:? par; do
 case ${par} in
 	h|'?')
 		usage
 		exit 0
 		;;
 	u|U)
-		[[ ${par} == "U" ]] && inst_confirm_proceed="no"
 		is_upgradetask="yes"
 		;;
 	H) sys_hostname="$OPTARG" ;;
@@ -52,13 +51,18 @@ echo "    $(textb "Hostname")            ${sys_hostname}
     $(textb "Domain")              ${sys_domain}
     $(textb "FQDN")                ${sys_hostname}.${sys_domain}
     $(textb "Timezone")            ${sys_timezone}
-    $(textb "mailcow MySQL")       ${my_mailcowuser}:${my_mailcowpass}@${my_dbhost}/${my_mailcowdb}"
+    -----------------------------------------------
+    $(textb "MySQL root pwd")      ${my_rootpw}
+    $(textb "mailcow MySQL URI")   ${my_mailcowuser}:${my_mailcowpass}@${my_dbhost}/${my_mailcowdb}"
 if [[ ${mailing_platform} == "roundcube" ]]; then
-	echo "    $(textb "Roundcube MySQL")     ${my_rcuser}:${my_rcpass}@${my_dbhost}/${my_rcdb}"
+	echo "    $(textb "Roundcube MySQL URI") ${my_rcuser}:${my_rcpass}@${my_dbhost}/${my_rcdb}"
 fi
-echo "    $(textb "mailcow admin user")  ${mailcow_admin_user}
-"
-
+echo "    -----------------------------------------------
+    $(textb "mailcow admin user")  ${mailcow_admin_user}
+    $(textb "mailcow admin pwd")   ${mailcow_admin_pass}
+    -----------------------------------------------
+    $(textb "mailcow version:")      ${mailcow_version}_${mailing_platform}"
+echo
 returnwait "System environment"
 echo --------------------------------- > installer.log
 echo MySQL database host: ${my_dbhost}  >> installer.log
@@ -146,7 +150,7 @@ echo "Logged credentials and further information to file `tput bold`installer.lo
 echo
 echo "Next steps:"
 echo " * Backup installer.log to a safe place and delete it from your server"
-echo " * Login to https://$sys_hostname.$sys_domain (pease use the full URL and not your IP address)"
+echo " * Login to https://$sys_hostname.$sys_domain (please use the full URL and not your IP address)"
 echo "   Username: ${mailcow_admin_user}"
 echo "   Password: ${mailcow_admin_pass}"
 echo " * Please recheck PTR records in ReverseDNS for both IPv4 and IPv6, also verify you have setup SPF TXT records."

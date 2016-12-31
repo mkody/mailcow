@@ -3,7 +3,7 @@
 server {
 	listen 80;
 	listen [::]:80;
-	server_name MAILCOW_HOST.MAILCOW_DOMAIN;
+	server_name MAILCOW_HOST.MAILCOW_DOMAIN autodiscover.MAILCOW_DOMAIN;
 	server_tokens off;
 	root /var/www/mail;
 	return 301 https://$host$request_uri;
@@ -14,6 +14,45 @@ server {
 		root /usr/lib/cgi-bin;
 		include /etc/nginx/fastcgi_params;
 		fastcgi_pass unix:/var/run/fcgiwrap.socket;
+	}
+}
+server {
+	listen 80;
+	listen [::]:80;
+	server_name autoconfig.MAILCOW_DOMAIN;
+	server_tokens off;
+	root /var/www/mail/autoconfig;
+}
+server {
+	listen 443;
+	listen [::]:443;
+	server_name autodiscover.MAILCOW_DOMAIN;
+	server_tokens off;
+	ssl on;
+	ssl_certificate         /etc/ssl/mail/mail.crt;
+	ssl_certificate_key     /etc/ssl/mail/mail.key;
+	ssl_prefer_server_ciphers on;
+	ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+	ssl_ciphers 'ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:CAMELLIA:DES-CBC3-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA';
+	ssl_dhparam /etc/ssl/mail/dhparams.pem;
+	add_header Strict-Transport-Security max-age=15768000;
+	ssl_session_timeout 30m;
+	root /var/www/mail;
+	location ~ \.php$ {
+		include fastcgi_params;
+		fastcgi_split_path_info ^(.+\.php)(/.+)$;
+		fastcgi_pass unix:/var/run/php-mail-fpm.sock;
+		fastcgi_index index.php;
+		fastcgi_param HTTPS on;
+		fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+		fastcgi_read_timeout 630;
+		fastcgi_keep_conn on;
+	}
+	location ^~ /.well-known/acme-challenge {
+		try_files $uri /dev/null =404;
+	}
+	location / {
+		rewrite ^(.*) /autodiscover.php last;
 	}
 }
 server {
@@ -34,6 +73,13 @@ server {
 	root /var/www/mail;
 	index index.html index.htm index.php;
 	error_page 502 /redir.html;
+
+	# Block site from being framed (Old style)
+	add_header X-Frame-Options "DENY";
+	# Prevent browsers from incorrectly detecting non-scripts as scripts
+	add_header X-Content-Type-Options nosniff;
+	# Block pages from loading when they detect reflected XSS attacks
+	add_header X-XSS-Protection "1; mode=block";
 
 	location /redir.html {
 		return 301 /admin.php;
@@ -133,7 +179,7 @@ server {
 		alias /usr/lib/GNUstep/SOGo/$1.SOGo/Resources/$2;
 	}
 
-	location (^/SOGo/so/ControlPanel/Products/[^/]*UI/Resources/.*\.(jpg|png|gif|css|js)$ {
+	location (^/SOGo/so/ControlPanel/Products/[^/]*UI/Resources/.*\.(jpg|png|gif|css|js)$) {
 		alias /usr/lib/GNUstep/SOGo/$1.SOGo/Resources/$2;
 	}
 

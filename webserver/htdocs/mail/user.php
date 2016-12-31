@@ -1,7 +1,9 @@
 <?php
-require_once("inc/header.inc.php");
-$_SESSION['return_to'] = $_SERVER['REQUEST_URI'];
+require_once("inc/prerequisites.inc.php");
+
 if (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == 'user') {
+	require_once("inc/header.inc.php");
+	$_SESSION['return_to'] = $_SERVER['REQUEST_URI'];
 	$username = $_SESSION['mailcow_cc_username'];
 	$get_tls_policy = get_tls_policy($_SESSION['mailcow_cc_username']);
 ?>
@@ -48,7 +50,7 @@ if (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == 'user
 	</div>
 	<div class="form-group">
 		<div class="col-sm-offset-3 col-sm-9">
-			<button type="submit" name="trigger_set_user_account" class="btn btn-success btn-default"><?=$lang['user']['save_changes'];?></button>
+			<button type="submit" name="trigger_set_user_account" class="btn btn-success"><?=$lang['user']['save_changes'];?></button>
 		</div>
 	</div>
 </form>
@@ -64,31 +66,45 @@ if (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == 'user
 <div class="panel-body">
 <form class="form-horizontal" role="form" method="post">
 <div class="table-responsive">
-<table class="table table-striped" id="timelimitedaliases">
+<table class="table table-striped sortable-theme-bootstrap" data-sortable id="timelimitedaliases">
 	<thead>
 	<tr>
-		<th><?=$lang['user']['alias'];?></th>
-		<th><?=$lang['user']['alias_valid_until'];?></th>
+		<th class="sort-table" style="min-width: 96px;"><?=$lang['user']['alias'];?></th>
+		<th class="sort-table" style="min-width: 135px;"><?=$lang['user']['alias_valid_until'];?></th>
 	</tr>
 	</thead>
 	<tbody>
 	<?php
-	$stmt = $pdo->prepare("SELECT `address`,
-		`goto`,
-		`validity`
-			FROM `spamalias`
-				WHERE `goto` = :username
-					AND `validity` >= :unixnow");
-	$stmt->execute(array(':username' => $username, ':unixnow' => time()));
-	$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+	try {
+		$stmt = $pdo->prepare("SELECT `address`,
+			`goto`,
+			`validity`
+				FROM `spamalias`
+					WHERE `goto` = :username
+						AND `validity` >= :unixnow");
+		$stmt->execute(array(':username' => $username, ':unixnow' => time()));
+		$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+	}
+	catch(PDOException $e) {
+		$_SESSION['return'] = array(
+			'type' => 'danger',
+			'msg' => 'MySQL: '.$e
+		);
+	}
+	if(!empty($rows)):
 	while ($row = array_shift($rows)):
 	?>
-		<tr>
-		<td><?=$row['address'];?></td>
-		<td><?=date($lang['user']['alias_full_date'], $row['validity']);?></td>
+		<tr id="data">
+		<td><?=htmlspecialchars($row['address']);?></td>
+		<td><?=htmlspecialchars(date($lang['user']['alias_full_date'], $row['validity']));?></td>
 		</tr>
 	<?php
 	endwhile;
+	else:
+	?>
+		<tr id="no-data"><td colspan="2" style="text-align: center; font-style: italic;"><?=$lang['user']['no_record'];?></td></tr>
+	<?php
+	endif;	
 	?>
 	</tbody>
 </table>
@@ -132,7 +148,16 @@ if (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == 'user
 	<form class="form-horizontal" role="form" method="post">
 		<div class="form-group">
 			<div class="col-sm-offset-2 col-sm-10">
-				<input name="score" id="score" type="text" /><br /><br />
+				<input name="score" id="score" type="text" 
+					data-provide="slider"
+					data-slider-min="1"
+					data-slider-max="30"
+					data-slider-step="0.5"
+					data-slider-range="true"
+					data-slider-id="slider1"
+					data-slider-value="[<?=get_spam_score($_SESSION['mailcow_cc_username']);?>]"
+					data-slider-step="1" />
+				<br /><br />
 				<ul>
 					<li><?=$lang['user']['spamfilter_green'];?></li>
 					<li><?=$lang['user']['spamfilter_yellow'];?></li>
@@ -159,9 +184,17 @@ if (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == 'user
 				</div>
 				<div class="row"><div class="col-sm-12"><hr></div></div>
 				<?php
-				$stmt = $pdo->prepare("SELECT `value`, `prefid` FROM `userpref` WHERE `preference`='whitelist_from' AND `username`= :username");
-				$stmt->execute(array(':username' => $username));
-				$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+				try {
+					$stmt = $pdo->prepare("SELECT `value`, `prefid` FROM `userpref` WHERE `preference`='whitelist_from' AND `username`= :username");
+					$stmt->execute(array(':username' => $username));
+					$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+				}
+				catch(PDOException $e) {
+					$_SESSION['return'] = array(
+						'type' => 'danger',
+						'msg' => 'MySQL: '.$e
+					);
+				}
 				if (count($rows) == 0):
 				?>
 					<div class="row">
@@ -173,7 +206,7 @@ if (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == 'user
 				?>
 				<div class="row">
 					<form class="form-inline" method="post">
-					<div class="col-sm-6"><?=$whitelistRow['value'];?></div>
+					<div class="col-sm-6"><?=htmlspecialchars($whitelistRow['value']);?></div>
 					<div class="col-sm-6">
 						<input type="hidden" name="wlid" value="<?=$whitelistRow['prefid'];?>">
 						<button type="submit" id="trigger_delete_whitelist" name="trigger_delete_whitelist" style="margin-bottom:1px;" class="btn btn-xs btn-danger"><?=$lang['user']['spamfilter_table_remove'];?></button>
@@ -200,9 +233,17 @@ if (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == 'user
 				</div>
 				<div class="row"><div class="col-sm-12"><hr></div></div>
 				<?php
-				$stmt = $pdo->prepare("SELECT `value`, `prefid` FROM `userpref` WHERE `preference`='blacklist_from' AND `username`= :username");
-				$stmt->execute(array(':username' => $username));
-				$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+				try {
+					$stmt = $pdo->prepare("SELECT `value`, `prefid` FROM `userpref` WHERE `preference`='blacklist_from' AND `username`= :username");
+					$stmt->execute(array(':username' => $username));
+					$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+				}
+				catch(PDOException $e) {
+					$_SESSION['return'] = array(
+						'type' => 'danger',
+						'msg' => 'MySQL: '.$e
+					);
+				}
 				if (count($rows) == 0):
 				?>
 					<div class="row">
@@ -214,7 +255,7 @@ if (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == 'user
 				?>
 				<div class="row">
 					<form class="form-inline" method="post">
-					<div class="col-sm-6"><?=$blacklistRow['value'];?></div>
+					<div class="col-sm-6"><?=htmlspecialchars($blacklistRow['value']);?></div>
 					<div class="col-sm-6">
 						<input type="hidden" name="wlid" value="<?=$blacklistRow['prefid'];?>">
 						<button type="submit" id="trigger_delete_blacklist" name="trigger_delete_blacklist" style="margin-bottom:1px;" class="btn btn-xs btn-danger"><?=$lang['user']['spamfilter_table_remove'];?></button>
@@ -264,7 +305,7 @@ if (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == 'user
 		</div>
 		<div class="form-group">
 			<div class="col-sm-offset-2 col-sm-10">
-				<button type="submit" id="trigger_set_tls_policy" name="trigger_set_tls_policy" class="btn btn-default"><?=$lang['user']['save_changes'];?></button>
+				<button type="submit" id="trigger_set_tls_policy" name="trigger_set_tls_policy" class="btn btn-success"><?=$lang['user']['save_changes'];?></button>
 			</div>
 		</div>
 	</form>
@@ -274,10 +315,12 @@ if (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == 'user
 
 </div> <!-- /panel-group accordion -->
 </div> <!-- /container -->
+<script src="js/sorttable.js"></script>
+<script src="js/user.js"></script>
 <?php
-}
-else {
-	header('Location: /');
-}
 require_once("inc/footer.inc.php");
+} else {
+	header('Location: /');
+	exit();
+}
 ?>

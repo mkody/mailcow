@@ -4,7 +4,8 @@
 
 - [mailcow](#mailcow)
 - [Introduction](#introduction)
-- [Before You Begin](#before-you-begin)
+- [System Requirements](#system-requirements)
+- [Before You Begin (Prerequisites)](#before-you-begin-prerequisites)
 - [Installation](#installation)
 - [Upgrade](#upgrade)
 - [Uninstall](#uninstall)
@@ -16,9 +17,9 @@ mailcow
 
 mailcow is a mail server suite based on Dovecot, Postfix and other open source software, that provides a modern web UI for user/server administration.
 
-mailcow supports **Debian 8 Jessie, Ubuntu LTS 14.04 Trusty and Ubuntu LTS 16.04 Xenial**
+mailcow supports **Debian 8 (Jessie), Ubuntu LTS 14.04 (Trusty Tahr) and Ubuntu LTS 16.04 (Xenial Xerus)**
 
-Screenshots placeholder.
+[Everybody loves screenshots (v0.14)](http://imgur.com/a/lWX2V)
 
 # Introduction
 
@@ -36,9 +37,10 @@ Screenshots placeholder.
 * Incoming and outgoing spam and virus protection with FuGlu as pre-queue content filter; [Heinlein Support](https://www.heinlein-support.de/) spamassassin rules included; Advanced ClamAV malware filters
 * Sieve/ManageSieve (default filter: move spam to "Junk" folder, move tagged mail to folder "tag")
 * Public folder support via control center
-* per-user ACL
+* Per-user ACL
 * Shared Namespace
 * Quotas
+* Auto-configuration for ActiveSync + Thunderbird (and its derivates)
 
 Comes with...
 * Roundcube
@@ -49,14 +51,24 @@ or
 * SOGo
     * Full groupware with ActiveSync and Card-/CalDAV support
 
-# Before You Begin
-- **Please remove any web- and mail services** running on your server. I recommend using a clean Debian minimal installation.
-Remember to purge Debians default MTA Exim4:
+# System Requirements
+Please check, if your system meets the following system resources:
+
+| Resource                | mailcow (Roundcube) | mailcow (SOGo) |
+| ----------------------- | ------------------- | -------------- |
+| CPU                     | 1 GHz               | 1 GHz          |
+| RAM                     | 800 MiB             | 1 GiB          |
+| Disk                    | 5 GiB               | 5 GiB          |
+| System Type             | x86 or x86_64       | x86_64         |
+
+# Before You Begin: Prerequisites
+- **Please remove any web and mail services** running on your server. I recommend using a clean Debian minimal installation.
+Remember to purge Debian's default MTA Exim4:
 ```
 apt-get purge exim4*
 ``` 
 
-- If there is any firewall, unblock the following ports for incoming connections:
+- If there is a firewall, unblock the following ports for incoming connections:
 
 | Service               | Protocol | Port   |
 | -------------------   |:--------:|:-------|
@@ -65,10 +77,44 @@ apt-get purge exim4*
 | Postfix SMTP          | TCP      | 25     |
 | Dovecot IMAP          | TCP      | 143    |
 | Dovecot IMAPS         | TCP      | 993    |
+| Dovecot POP3          | TCP      | 110    |
+| Dovecot POP3S         | TCP      | 995    |
 | Dovecot ManageSieve   | TCP      | 4190   |
 | HTTP(S)               | TCP      | 80/443 |
 
+- Setup DNS records:
+
+Obviously you will need an A and/or AAAA record `sys_hostname.sys_domain` pointing to your IP address and a valid MX record.
+Let's Encrypt does not assign certificates when it cannot determine a valid IPv4 address.
+
+| Name                       | Type   | Value                        | Priority   |
+| ---------------------------|:------:|:----------------------------:|:-----------|
+| `sys_hostname.sys_domain`  | A/AAAA | IPv4/6                       | any        |
+| `sys_domain`               | MX     | `sys_hostname.sys_domain`    | 25         |
+
+Optional: Auto-configuration services for Thunderbird (and derivates) + ActiveSync.
+You do not need to setup `autodiscover` when not using SOGo with ActiveSync.
+
+| Name                       | Type   | Value                        | Priority   |
+| ---------------------------|:------:|:----------------------------:|:-----------|
+| autoconfig.`sys_domain`    | A/AAAA | IPv4/6                       | any        |
+| autodiscover.`sys_domain`  | A/AAAA | IPv4/6                       | any        |
+
+**Hint:** ActiveSync auto-discovery is setup to configure desktop clients with IMAP!
+
+The following records are optional but recommended:
+
+Please setup a SPF TXT record according to docs you will find on the internet.
+SPF is broken by design and a huge headache when it comes to forwarding.
+Try to not push yourself with a `-all` record but prefer `?all`. Also known as "I use SPF but I do not actually care". :-)
+
+After finishing the installation, head to the mailcow web UI, log in as admin and create DKIM TXT records for your domains.
+You will find them ready to copy and paste to your DNS servers configuration.
+
 - Next it is important that you **do not use Google DNS** or another public DNS which is known to be blocked by DNS-based Blackhole List (DNSBL) providers.
+
+I recommend PowerDNS Recursor as a local recursor with DNSSEC capabilities. See https://repo.powerdns.com/.
+Though any non-blocked or rate limited DNS server your ISP gave you *should* be fine.
 
 # Installation
 **Please run all commands as root**
@@ -90,6 +136,9 @@ nano mailcow.config
 
 * **sys_hostname** - Hostname without domain
 * **sys_domain** - Domain name. "$sys_hostname.$sys_domain" equals to FQDN.
+
+:exclamation: Please make sure your FQDN resolves correctly!
+
 * **sys_timezone** - The timezone must be defined in a valid format (Europe/Berlin, America/New_York etc.)
 * **use_lets_encrypt** - Tries to obtain a certificate from Let's Encrypt CA. If it fails, it can be retried by calling `./install.sh -s`. Installs a cronjob to renew the certificate but keeps the same key.
 * **httpd_platform** - Select wether to use Nginx ("nginx") or Apache2 ("apache2"). Nginx is default.
@@ -117,30 +166,29 @@ More debugging is about to come. Though everything should work as intended.
 
 After the installation, visit your dashboard @ **https://hostname.example.com**, use the logged credentials in `./installer.log`
 
-Remember to create an alias- or a mailbox for Postmaster. ;-)
+Remember to create an alias or a mailbox for `postmaster`.
 
-Please set/update all DNS records accordingly.
+Again, please check you setup all DNS records accordingly.
 
-## Default web panel language
-You can change the default language of the mailcow UI by opening `/var/www/mail/inc/vars.inc.php` and changing the default_lang parameter.
+## Web UI configuration variables
 
+Some settings can be changed by overwriting defaults of `/var/www/mail/inc/vars.inc.php` in `/var/www/mail/inc/vars.local.inc.php`.
+
+Changes to `/var/www/mail/inc/vars.local.inc.php` will not be overwritten when upgrading mailcow.
+
+##
 
 # Upgrade
 **Please run all commands as root**
 
-Upgrade is supported since mailcow v0.7.x. From v0.9 on you do not need the file `installer.log` from a previous installation.
-
-The mailcow configuration file will not be read, so there is no need to adjust it in any way before upgrading.
+The mailcow configuration file (mailcow.config) will not be read, so there is no need to adjust it in any way before upgrading.
 
 To start the upgrade, run the following command:
 ```
 ./install.sh -u
 ```
 
-If you don't want to confirm each step of the upgrade, use `-U` instead:
-```
-./install -U
-```
+**Please double check the detected FQDN!**
 
 When autodetection of your hostname and/or domain name fails, use the `-H` parameter to overwrite the hostname and/or `-D` to overwrite the domain name:
 ```
@@ -149,14 +197,68 @@ When autodetection of your hostname and/or domain name fails, use the `-H` param
 ```
 
 # Uninstall
-Run `bash misc/purge.sh` from within mailcow directory to remove mailcow main components.
+Please remove the components you do not need manually. mailcow installs components that may be used by other software on your system.
+mailcow is an installer that installs and configures software, so there is no routine to remove itself.
 
-Your web server + web root, MySQL server + databases as well as your mail directory (/var/vmail) will **not** be removed (>= v0.9).
+**A list of by apt-get installed components**
+```
+# System tools
+dnsutils sudo zip bzip2 unzip unrar-free curl openssl file bsd-mailx
 
-Please open and review the script before running it!
+# Core components
+# ${OPENJDK} is either "openjdk-7" or "openjdk-9"
+rrdtool mailgraph fcgiwrap spawn-fcgi python-setuptools libmail-spf-perl libmail-dkim-perl mailutils pyzor razor postfix postfix-mysql postfix-pcre postgrey pflogsumm spamassassin spamc opendkim opendkim-tools clamav-daemon python-magic liblockfile-simple-perl libdbi-perl libmime-base64-urlsafe-perl libtest-tempdir-perl liblogger-syslog-perl ${OPENJDK}-jre-headless libcurl4-openssl-dev libexpat1-dev solr-jetty
 
-**You can perform a FULL WIPE** by appending `--all`:
+# PHP components
+# ${PHP} is either PHP or PHP5
+php-auth-sasl php-http-request php-mail php-mail-mime php-mail-mimedecode php-net-dime php-net-smtp php-net-socket php-net-url php-pear php-soap ${PHP} ${PHP}-cli ${PHP}-common ${PHP}-curl ${PHP}-gd ${PHP}-imap ${PHP}-intl ${PHP}-xsl libawl-php ${PHP}-mcrypt ${PHP}-mysql ${PHP}-xmlrpc
 
-```bash misc/purge.sh --all```
+# Database components
+mariadb-client mariadb-server
+# or...
+mysql-client mysql-server
 
-This WILL purge sensible data like your web root, databases + MySQL installation, mail directory and more... 
+# Webserver components
+# ${PHP} is either PHP or PHP5
+apache2 apache2-utils libapache2-mod-${PHP}
+# or...
+nginx-extras ${PHP}-fpm
+
+# Dovecot components
+dovecot-common dovecot-core dovecot-imapd dovecot-lmtpd dovecot-managesieved dovecot-sieve dovecot-mysql dovecot-pop3d dovecot-solr
+
+# SOGo
+# ALSO: rm /etc/apt/sources.list.d/sogo.list
+sogo sogo-activesync libwbxml2-0 memcached
+
+```
+
+**System modifications**
+```
+# Cronjobs
+rm /etc/cron.daily/mc_clean_spam_aliases /etc/cron.daily/mailcow-clean-spam-aliases /etc/cron.daily/dovemaint /etc/cron.d/solrmaint /etc/cron.daily/spamlearn /etc/cron.daily/spamassassin_heinlein /etc/cron.weekly/le-renew
+
+# Sudo
+rm /etc/sudoers.d/mailcow
+
+# Executables
+rm /usr/local/sbin/mailcow-reset-admin /usr/local/sbin/mailcow-dkim-tool /usr/local/sbin/mailcow-set-message-limit /usr/local/sbin/mailcow-renew-pflogsumm /usr/local/sbin/mc_pflog_renew /usr/local/sbin/mc_msg_size /usr/local/sbin/mc_dkim_ctrl /usr/local/sbin/mc_resetadmin
+```
+
+**Manually installed components and miscellaneous**
+```
+# Databases
+# Besides aboves packages, you may want to drop the mailcow and, if installed, Roundcube database. SOGo uses the mailcow database.
+DROP DATABASE $mailcowdb;
+DROP DATABASE $roundcubedb;
+ 
+# Let's Encrypt
+rm -r /opt/letsencrypt-sh/
+
+# FuGlu
+systemctl disable fuglu
+rm -rf /usr/local/lib/python2.7/dist-packages/fuglu*
+update-rc.d -f fuglu remove
+userdel fuglu
+```
+

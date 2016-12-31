@@ -1,15 +1,20 @@
 <?php
-require_once("inc/header.inc.php");
-$_SESSION['return_to'] = $_SERVER['REQUEST_URI'];
-if (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == 'admin') {
+require_once("inc/prerequisites.inc.php");
+
+if (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == "admin") {
 	header('Location: /admin.php');
+	exit();
 }
 elseif (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == "domainadmin") {
 	header('Location: /mailbox.php');
+	exit();
 }
 elseif (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == "user") {
 	header('Location: /user.php');
+	exit();
 }
+require_once("inc/header.inc.php");
+$_SESSION['return_to'] = $_SERVER['REQUEST_URI'];
 ?>
 <div class="container">
 	<div class="row">
@@ -17,9 +22,7 @@ elseif (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == "
 			<div class="panel panel-default">
 				<div class="panel-heading"><span class="glyphicon glyphicon-user" aria-hidden="true"></span> <?=$lang['login']['login'];?></div>
 				<div class="panel-body">
-					<center>
-						<img class="img-responsive" src="img/200.png" alt="mailcow">
-					</center>
+					<a href="/"><img style="max-width: 200px; max-height; 120px; margin-left: auto; margin-right: auto;" class="img-responsive" src="img/mailcow.svg" alt="mailcow"></a>
 					<legend>mailcow UI</legend>
 						<form method="post" autofill="off">
 						<div class="form-group">
@@ -43,8 +46,11 @@ elseif (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == "
 									<span class="lang-sm lang-lbl" lang="<?=$_SESSION['mailcow_locale'];?>"></span> <span class="caret"></span>
 								</button>
 								<ul class="dropdown-menu">
-									<li <?=($_SESSION['mailcow_locale'] == 'de') ? 'class="active"' : ''?>> <a href="#" onClick="setLang('de')"><span class="lang-xs lang-lbl-full" lang="de"></a></li>
-									<li <?=($_SESSION['mailcow_locale'] == 'en') ? 'class="active"' : ''?>><a href="#" onClick="setLang('en')"><span class="lang-xs lang-lbl-full" lang="en"></a></li>
+									<li <?=($_SESSION['mailcow_locale'] == 'de') ? 'class="active"' : ''?>><a href="?<?= http_build_query(array_merge($_GET, array("lang" => "de"))) ?>"><span class="lang-xs lang-lbl-full" lang="de"></span></a></li>
+									<li <?=($_SESSION['mailcow_locale'] == 'en') ? 'class="active"' : ''?>><a href="?<?= http_build_query(array_merge($_GET, array("lang" => "en"))) ?>"><span class="lang-xs lang-lbl-full" lang="en"></span></a></li>
+									<li <?=($_SESSION['mailcow_locale'] == 'fr') ? 'class="active"' : ''?>><a href="?<?= http_build_query(array_merge($_GET, array("lang" => "fr"))) ?>"><span class="lang-xs lang-lbl-full" lang="fr"></span></a></li>
+									<li <?=($_SESSION['mailcow_locale'] == 'nl') ? 'class="active"' : ''?>><a href="?<?= http_build_query(array_merge($_GET, array("lang" => "nl"))) ?>"><span class="lang-xs lang-lbl-full" lang="nl"></span></a></li>
+									<li <?=($_SESSION['mailcow_locale'] == 'pt') ? 'class="active"' : ''?>><a href="?<?= http_build_query(array_merge($_GET, array("lang" => "pt"))) ?>"><span class="lang-xs lang-lbl-full" lang="pt"></span></a></li>
 								</ul>
 							</div>
 						</div>
@@ -90,6 +96,7 @@ elseif (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == "
 		</div>
 	</div>
 </div> <!-- /container -->
+<script src="js/index.js"></script>
 <?php
 require_once("inc/footer.inc.php");
 ?>

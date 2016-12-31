@@ -190,7 +190,7 @@ function set_mailcow_config($s, $v = '') {
 			if (!ctype_alnum($v)) {
 				$_SESSION['return'] = array(
 					'type' => 'danger',
-					'msg' => 'Invalid max. message size'
+					'msg' => $lang['admin']['invalid_max_msg_size']
 				);
 				break;
 			}
@@ -205,13 +205,8 @@ function set_mailcow_config($s, $v = '') {
 			}
 			break;
 		case "anonymize":
-			$template = '/^\s*(Received: from)[^\n]*(.*)/ REPLACE $1 [127.0.0.1] (localhost [127.0.0.1])$2
-/^\s*User-Agent/        IGNORE
-/^\s*X-Enigmail/        IGNORE
-/^\s*X-Mailer/          IGNORE
-/^\s*X-Originating-IP/  IGNORE
-		';
 			if ($v == "on") {
+ 				$template = file_get_contents($GLOBALS["MC_ANON_HEADERS"].".template");
 				file_put_contents($GLOBALS["MC_ANON_HEADERS"], $template);
 			} else {
 				file_put_contents($GLOBALS["MC_ANON_HEADERS"], "");
@@ -221,7 +216,7 @@ function set_mailcow_config($s, $v = '') {
 			if (!ctype_alnum(str_replace("/", "", $v['public_folder_name']))) {
 				$_SESSION['return'] = array(
 					'type' => 'danger',
-					'msg' => 'Public folder name must not be empty'
+					'msg' => $lang['admin']['public_folder_empty']
 				);
 				break;
 			}
@@ -270,6 +265,26 @@ namespace {
 				break;
 			}
 			break;
+		case "reset-ssr":
+			exec('sudo /usr/sbin/postconf -e smtpd_sender_restrictions="reject_authenticated_sender_login_mismatch, permit_mynetworks, reject_sender_login_mismatch, permit_sasl_authenticated, reject_unlisted_sender, reject_unknown_sender_domain"', $out, $return);
+			if ($return != "0") {
+				$_SESSION['return'] = array(
+					'type' => 'danger',
+					'msg' => $lang['admin']['set_rr_failed']
+				);
+				break;
+			}
+			break;
+		case "reset-srr":
+			exec('sudo /usr/sbin/postconf -e smtpd_recipient_restrictions="check_recipient_access proxy:mysql:/etc/postfix/sql/mysql_tls_enforce_in_policy.cf permit_sasl_authenticated, permit_mynetworks, reject_invalid_helo_hostname, reject_unknown_reverse_client_hostname, reject_unauth_destination"', $out, $return);
+			if ($return != "0") {
+				$_SESSION['return'] = array(
+					'type' => 'danger',
+					'msg' => $lang['admin']['set_rr_failed']
+				);
+				break;
+			}
+			break;
 	}
 	if (!isset($_SESSION['return'])) {
 		$_SESSION['return'] = array(
@@ -307,8 +322,16 @@ function opendkim_table($action, $which = "") {
 			);
 			break;
 		case "add":
-			$selector	= explode("_", $which)[0];
-			$domain		= explode("_", $which)[1];
+			$selector	= trim($which['dkim_selector']);
+			$domain		= trim($which['dkim_domain']);
+			$key_length	= trim($which['dkim_key_size']);
+			if (!is_numeric($key_length)) {
+				$_SESSION['return'] = array(
+					'type' => 'danger',
+					'msg' => sprintf($lang['danger']['dkim_key_length_invalid'])
+				);
+				break;
+			}
 			if (!ctype_alnum($selector) || !is_valid_domain_name($domain)) {
 				$_SESSION['return'] = array(
 					'type' => 'danger',
@@ -318,7 +341,7 @@ function opendkim_table($action, $which = "") {
 			}
 			$selector	= escapeshellarg($selector);
 			$domain		= escapeshellarg($domain);
-			exec('sudo /usr/local/sbin/mailcow-dkim-tool add '.$selector.' '.$domain, $out, $return);
+			exec('sudo /usr/local/sbin/mailcow-dkim-tool add '.$selector.' '.$domain.' '.$key_length, $out, $return);
 			if ($return != "0") {
 				$_SESSION['return'] = array(
 					'type' => 'danger',
@@ -335,6 +358,14 @@ function opendkim_table($action, $which = "") {
 }
 function sys_info($what) {
 	switch ($what) {
+		case "uptime":
+			$ut = strtok(exec("cat /proc/uptime"), ".");
+			$uptime['days'] = sprintf("%2d", ($ut/(3600*24)));
+			$uptime['hours'] = sprintf("%2d", (($ut%(3600*24))/3600));
+			$uptime['minutes'] = sprintf("%2d", ($ut%(3600*24)%3600)/60);
+			$uptime['seconds'] = sprintf("%2d", ($ut%(3600*24)%3600)%60);
+			return $uptime;
+			break;
 		case "ram":
 			$return['total']		= filter_var(shell_exec("free -b | grep Mem | awk '{print $2}'"), FILTER_SANITIZE_NUMBER_FLOAT);
 			$return['used']			= filter_var(shell_exec("free -b | grep Mem | awk '{print $3}'"), FILTER_SANITIZE_NUMBER_FLOAT);
@@ -348,6 +379,12 @@ function sys_info($what) {
 			$du = $dt - $df;
 			return sprintf('%.2f',($du / $dt) * 100);
 			break;
+    		case "cpu":
+		      	$exec_loads = sys_getloadavg();
+		      	$exec_cores = trim(shell_exec("grep -P '^processor' /proc/cpuinfo|wc -l"));
+		      	$cpu = round($exec_loads[1]/($exec_cores + 1)*100, 0);
+		      	return $cpu;
+		      	break;
 		case "pflog":
 			$pflog_content = file_get_contents($GLOBALS['PFLOG']);
 			if (!file_exists($GLOBALS['PFLOG'])) {
@@ -492,8 +529,7 @@ function mailbox_add_alias($postarray) {
 	$addresses		= array_map('trim', preg_split( "/( |,|;|\n)/", $postarray['address']));
 	$gotos			= array_map('trim', preg_split( "/( |,|;|\n)/", $postarray['goto']));
 	isset($postarray['active']) ? $active = '1' : $active = '0';
-
-	if (empty($addresses)) {
+	if (empty($addresses[0])) {
 		$_SESSION['return'] = array(
 			'type' => 'danger',
 			'msg' => sprintf($lang['danger']['alias_empty'])
@@ -501,7 +537,7 @@ function mailbox_add_alias($postarray) {
 		return false;
 	}
 
-	if (empty($gotos)) {
+	if (empty($gotos[0])) {
 		$_SESSION['return'] = array(
 			'type' => 'danger',
 			'msg' => sprintf($lang['danger']['goto_empty'])
@@ -614,7 +650,7 @@ function mailbox_add_alias($postarray) {
 					':goto' => $goto,
 					':domain' => $domain,
 					':created' => date('Y-m-d H:i:s'),
-					':modified' => date('Y-m-d H:i:s'),					
+					':modified' => date('Y-m-d H:i:s'),
 					':active' => $active
 				));
 			}
@@ -623,6 +659,8 @@ function mailbox_add_alias($postarray) {
 					':address' => $address,
 					':goto' => $goto,
 					':domain' => $domain,
+					':created' => date('Y-m-d H:i:s'),
+					':modified' => date('Y-m-d H:i:s'),
 					':active' => $active
 				));
 			}
@@ -706,9 +744,10 @@ function mailbox_add_alias_domain($postarray) {
 	}
 
 	try {
-		$stmt = $pdo->prepare("SELECT `alias_domain` FROM `alias_domain`
-			WHERE `alias_domain`= :alias_domain");
-		$stmt->execute(array(':alias_domain' => $alias_domain));
+		$stmt = $pdo->prepare("SELECT `alias_domain` FROM `alias_domain` WHERE `alias_domain`= :alias_domain
+			UNION
+			SELECT `alias_domain` FROM `alias_domain` WHERE `alias_domain`= :alias_domain_in_domain");
+		$stmt->execute(array(':alias_domain' => $alias_domain, ':alias_domain_in_domain' => $alias_domain));
 		$num_results = count($stmt->fetchAll(PDO::FETCH_ASSOC));
 	}
 	catch(PDOException $e) {
@@ -1037,7 +1076,7 @@ function mailbox_add_mailbox($postarray) {
 	if ($quota_m > $DomainData['maxquota']) {
 		$_SESSION['return'] = array(
 			'type' => 'danger',
-			'msg' => sprintf($lang['danger']['mailbox_quota_exceeded'], $quota_m, $DomainData['maxquota'])
+			'msg' => sprintf($lang['danger']['mailbox_quota_exceeded'], $DomainData['maxquota'])
 		);
 		return false;
 	}
@@ -1237,7 +1276,7 @@ function mailbox_edit_domain($postarray) {
 	if ($MailboxData['maxquota'] > $maxquota) {
 		$_SESSION['return'] = array(
 			'type' => 'danger',
-			'msg' => sprintf($lang['danger']['maxquota_in_use'], $MailboxData['maxquota'])
+			'msg' => sprintf($lang['danger']['max_quota_in_use'], $MailboxData['maxquota'])
 		);
 		return false;
 	}
@@ -1275,7 +1314,7 @@ function mailbox_edit_domain($postarray) {
 	}
 	try {
 		$stmt = $pdo->prepare("UPDATE `domain` SET 
-		`modified`= modified,
+		`modified`= :modified,
 		`relay_all_recipients` = :relay_all_recipients,
 		`backupmx` = :backupmx,
 		`active` = :active,
@@ -1498,7 +1537,7 @@ function mailbox_edit_mailbox($postarray) {
 	if ($quota_m > $DomainData['maxquota']) {
 		$_SESSION['return'] = array(
 			'type' => 'danger',
-			'msg' => sprintf($lang['danger']['mailbox_quota_exceeded'], $quota_m, $DomainData['maxquota'])
+			'msg' => sprintf($lang['danger']['mailbox_quota_exceeded'], $DomainData['maxquota'])
 		);
 		return false;
 	}
@@ -2152,7 +2191,7 @@ function set_user_account($postarray) {
 			try {
 				$stmt = $pdo->prepare("UPDATE `mailbox` SET `modified` = :modified, `password` = :password_hashed WHERE `username` = :username");
 				$stmt->execute(array(
-					':password_hashed' => $username,
+					':password_hashed' => $password_hashed,
 					':modified' => date('Y-m-d H:i:s'),
 					':username' => $username
 				));
@@ -2389,6 +2428,7 @@ function set_whitelist($postarray) {
 	global $pdo;
 	$username	= $_SESSION['mailcow_cc_username'];
 	$whitelist_from	= trim(strtolower($postarray['whitelist_from']));
+	$whitelist_from = preg_replace("/\.\*/", "*", $whitelist_from);
 	if (!filter_var($username, FILTER_VALIDATE_EMAIL)) {
 		$_SESSION['return'] = array(
 			'type' => 'danger',
@@ -2488,6 +2528,7 @@ function set_blacklist($postarray) {
 	global $pdo;
 	$username		= $_SESSION['mailcow_cc_username'];
 	$blacklist_from	= trim(strtolower($postarray['blacklist_from']));
+	$blacklist_from = preg_replace("/\.\*/", "*", $blacklist_from);
 	if (!filter_var($username, FILTER_VALIDATE_EMAIL)) {
 		$_SESSION['return'] = array(
 			'type' => 'danger',
@@ -2548,7 +2589,7 @@ function delete_blacklist($postarray) {
 	global $lang;
 	global $pdo;
 	$username	= $_SESSION['mailcow_cc_username'];
-	$prefid		= $postarray['wlid'];
+	$prefid		= $postarray['blid'];
 	if (!filter_var($username, FILTER_VALIDATE_EMAIL)) {
 		$_SESSION['return'] = array(
 			'type' => 'danger',
@@ -2698,7 +2739,165 @@ function get_tls_policy($username) {
 	}
 	return $TLSData;
 }
-function is_valid_domain_name($domain_name) {
+function remaining_specs($domain, $object = null, $js = null) {
+	// left_m	without object given	= MiB left in domain
+	// left_m	with object given		= Max. MiB we can assign to given object
+	// limit_m							= Domain limit in MiB
+	// left_c							= Mailboxes we can create depending on domain quota
+	global $pdo;
+	if (!hasDomainAccess($_SESSION['mailcow_cc_username'], $_SESSION['mailcow_cc_role'], $domain)) {
+		return false;
+	}
+	try {
+		$stmt = $pdo->prepare("SELECT `mailboxes`, `maxquota`, `quota` FROM `domain` WHERE `domain` = :domain");
+		$stmt->execute(array(':domain' => $domain));
+		$DomainData			= $stmt->fetch(PDO::FETCH_ASSOC);
+
+		$stmt = $pdo->prepare("SELECT COUNT(*) AS `count`, COALESCE(ROUND(SUM(`quota`)/1048576), 0) as `in_use_m` FROM `mailbox` WHERE `domain` = :domain AND `username` != :object");
+		$stmt->execute(array(':domain' => $domain, ':object' => $object));
+		$MailboxDataDomain	= $stmt->fetch(PDO::FETCH_ASSOC);
+
+		$quota_left_m	= $DomainData['quota']		- $MailboxDataDomain['in_use_m'];
+		$mboxs_left		= $DomainData['mailboxes']	- $MailboxDataDomain['count'];
+
+		if ($quota_left_m > $DomainData['maxquota']) {
+			$quota_left_m = $DomainData['maxquota'];
+		}
+
+	}
+	catch (PDOException $e) {
+		return false;
+	}
+	if (is_numeric($quota_left_m)) {
+		$spec['left_m']		= $quota_left_m;
+		$spec['limit_m']	= $DomainData['maxquota'];
+	}
+	if (is_numeric($mboxs_left)) {
+		$spec['left_c']		= $mboxs_left;
+	}
+	if (!empty($js)) {
+		echo $quota_left_m;
+		exit;
+	}
+	return $spec;
+}
+function get_sender_acl_handles($mailbox, $which) {
+	global $pdo;
+	if ($_SESSION['mailcow_cc_role'] != "admin" && $_SESSION['mailcow_cc_role'] != "domainadmin") {
+		return false;
+	}
+	switch ($which) {
+		case "preselected":
+			try {
+				$stmt = $pdo->prepare("SELECT `address` FROM `alias` WHERE `goto` = :goto AND `address` NOT LIKE '@%'");
+				$stmt->execute(array(':goto' => $mailbox));
+				$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+				return $rows;
+			}
+			catch(PDOException $e) {
+				$_SESSION['return'] = array(
+					'type' => 'danger',
+					'msg' => 'MySQL: '.$e
+				);
+				return false;
+			}
+			break;
+		case "selected":
+			try {
+				$stmt = $pdo->prepare("SELECT `send_as` FROM `sender_acl` WHERE `logged_in_as` = :logged_in_as");
+				$stmt->execute(array(':logged_in_as' => $mailbox));
+				$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+				return $rows;
+			}
+			catch(PDOException $e) {
+				$_SESSION['return'] = array(
+					'type' => 'danger',
+					'msg' => 'MySQL: '.$e
+				);
+				return false;
+			}
+			break;
+		case "unselected-domains":
+			try {
+				if ($_SESSION['mailcow_cc_role'] == "admin"  ) {
+					$stmt = $pdo->prepare("SELECT DISTINCT `domain` FROM `domain`
+						WHERE `domain` NOT IN (
+							SELECT REPLACE(`send_as`, '@', '') FROM `sender_acl` 
+								WHERE `logged_in_as` = :logged_in_as)
+						AND	`domain` NOT IN (
+								SELECT REPLACE(`address`, '@', '') FROM `alias` 
+									WHERE `goto` = :goto)");
+					$stmt->execute(array(
+						':logged_in_as' => $mailbox,
+						':goto' => $mailbox,
+					));
+				}
+				else {
+					$stmt = $pdo->prepare("SELECT DISTINCT `domain` FROM `domain_admins`
+						WHERE `username` = :username
+							AND `domain` != 'ALL'
+							AND	`domain` NOT IN (
+								SELECT REPLACE(`send_as`, '@', '') FROM `sender_acl` 
+									WHERE `logged_in_as` = :logged_in_as)");
+					$stmt->execute(array(
+						':logged_in_as' => $mailbox,
+						':username' => $_SESSION['mailcow_cc_username']
+					));
+				}
+				$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+				return $rows;
+			}
+			catch(PDOException $e) {
+				$_SESSION['return'] = array(
+					'type' => 'danger',
+					'msg' => 'MySQL: '.$e
+				);
+				return false;
+			}
+			break;
+		case "unselected-addresses":
+			try {
+				if ($_SESSION['mailcow_cc_role'] == "admin"  ) {
+					$stmt = $pdo->prepare("SELECT `address` FROM `alias`
+						WHERE `goto` != :goto
+							AND `address` NOT IN (
+								SELECT `send_as` FROM `sender_acl` 
+									WHERE `logged_in_as` = :logged_in_as)");
+					$stmt->execute(array(
+						':logged_in_as' => $mailbox,
+						':goto' => $mailbox
+					));
+				}
+				else {
+					$stmt = $pdo->prepare("SELECT `address` FROM `alias`
+						WHERE `goto` != :goto
+							AND `domain` IN (
+								SELECT `domain` FROM `domain_admins`
+									WHERE `username` = :username)
+							AND `address` NOT IN (
+								SELECT `send_as` FROM `sender_acl` 
+									WHERE `logged_in_as` = :logged_in_as)");
+					$stmt->execute(array(
+						':logged_in_as' => $mailbox,
+						':goto' => $mailbox,
+						':username' => $_SESSION['mailcow_cc_username']
+					));
+				}
+				$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+				return $rows;
+			}
+			catch(PDOException $e) {
+				$_SESSION['return'] = array(
+					'type' => 'danger',
+					'msg' => 'MySQL: '.$e
+				);
+				return false;
+			}
+			break;
+	}
+	return false;
+}
+function is_valid_domain_name($domain_name) { 
 	if (empty($domain_name)) {
 		return false;
 	}
