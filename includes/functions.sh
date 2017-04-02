@@ -130,6 +130,14 @@ checkconfig() {
 		echo "$(redb [ERR]) - Cannot install SOGo on $(arch) hardware, need x86_64"
 		exit 1
 	fi
+	if [[ ${use_lets_encrypt} == "yes" ]]; then
+		if [ -z ${lets_encrypt_mail+x} ] || [ -z $lets_encrypt_mail ]; then
+			lets_encrypt_mail="postmaster@${sys_domain}"
+		elif [[ "$lets_encrypt_mail" != ?*@?*.?* ]]
+			echo "$(redb [ERR]) - \"lets_encrypt_mail\" is not a valid mail address"
+			exit 1
+		fi
+	fi
 	for var in sys_hostname sys_domain sys_timezone my_dbhost my_mailcowdb my_mailcowuser my_mailcowpass my_rootpw my_rcuser my_rcpass my_rcdb mailcow_admin_user mailcow_admin_pass
 	do
 		if [[ -z ${!var} ]]; then
@@ -318,8 +326,8 @@ DEBIAN_FRONTEND=noninteractive ${APT} -y install dovecot-common dovecot-core dov
 				else
 					echo "${sys_hostname}.${sys_domain}" > /etc/ssl/mail/domains.txt
 				fi
-				# Set postmaster as certificate owner
-				sed -i "s/MAILCOW_DOMAIN/${sys_domain}/g" /opt/letsencrypt-sh/config.sh
+				# Set lets_encrypt_mail as certificate owner
+				sed -i "s/MAILCOW_LE_MAIL/${lets_encrypt_mail}/g" /opt/letsencrypt-sh/config.sh
 				# letsencrypt-sh will use config instead of config.sh for versions >= 0.2.0
 				cp /opt/letsencrypt-sh/config.sh /opt/letsencrypt-sh/config
 				install -m 755 letsencrypt-sh/conf/le-renew /etc/cron.weekly/le-renew
