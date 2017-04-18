@@ -130,13 +130,9 @@ checkconfig() {
 		echo "$(redb [ERR]) - Cannot install SOGo on $(arch) hardware, need x86_64"
 		exit 1
 	fi
-	if [[ ${use_lets_encrypt} == "yes" ]]; then
-		if [ -z ${lets_encrypt_mail+x} ] || [ -z $lets_encrypt_mail ]; then
-			lets_encrypt_mail="postmaster@${sys_domain}"
-		elif [[ "$lets_encrypt_mail" != ?*@?*.?* ]]
-			echo "$(redb [ERR]) - \"lets_encrypt_mail\" is not a valid mail address"
-			exit 1
-		fi
+	if [[ ${use_lets_encrypt} == "yes" && "$lets_encrypt_mail" != ?*@?*.?* ]]; then
+		echo "$(redb [ERR]) - \"lets_encrypt_mail\" is not a valid mail address"
+		exit 1
 	fi
 	for var in sys_hostname sys_domain sys_timezone my_dbhost my_mailcowdb my_mailcowuser my_mailcowpass my_rootpw my_rcuser my_rcpass my_rcdb mailcow_admin_user mailcow_admin_pass
 	do
