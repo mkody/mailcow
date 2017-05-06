@@ -3,6 +3,7 @@
 ![mailcow](https://www.debinux.de/256.png)
 
 - [mailcow](#mailcow)
+- [Get Support](#get-support)
 - [Introduction](#introduction)
 - [System Requirements](#system-requirements)
 - [Before You Begin (Prerequisites)](#before-you-begin-prerequisites)
@@ -20,6 +21,18 @@ mailcow is a mail server suite based on Dovecot, Postfix and other open source s
 mailcow supports **Debian 8 (Jessie), Ubuntu LTS 14.04 (Trusty Tahr) and Ubuntu LTS 16.04 (Xenial Xerus)**
 
 [Everybody loves screenshots (v0.14)](http://imgur.com/a/lWX2V)
+
+## Get support
+
+### Commercial support
+
+For commercial support contact [info@servercow.de](mailto:info@servercow.de).
+
+### Community support
+
+- IRC @ [Freenode, #mailcow](irc://irc.freenode.org:6667/mailcow)
+- Forum @ [forum.mailcow.email](forum.mailcow.email)
+- GitHub @ [mailcow/mailcow-dockerized](https://github.com/mailcow/mailcow)
 
 # Introduction
 
