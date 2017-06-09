@@ -182,6 +182,7 @@ installtask() {
 		installpackages)
 			dist_codename=$(lsb_release -cs)
 			dist_id=$(lsb_release -is)
+			PHPMAILMIMEDECODE="php-mail-mimedecode"
 			if [[ ! -z $(apt-cache search --names-only '^php5-cli$') ]]; then
 				PHP="php5"
 				PHPV="5"
@@ -204,6 +205,18 @@ installtask() {
 					fi
 					OPENJDK="openjdk-7"
 					JETTY_NAME="jetty8"
+				elif [[ ${dist_codename} == "stretch" ]]; then
+					#Debian 9 will not start Postfix or Dovecot when SSLv2 parameter is used. There is no support for php-mail-mimedecode
+					sed -i 's/!SSLv2, //g' ./postfix/conf/main.cf
+					sed -i 's/!SSLv2//g' ./dovecot/conf/dovecot.conf
+					PHPMAILMIMEDECODE=""
+					if [[ ${httpd_platform} == "apache2" ]]; then
+						WEBSERVER_BACKEND="apache2 apache2-utils libapache2-mod-${PHP}"
+					else
+						WEBSERVER_BACKEND="nginx-extras ${PHP}-fpm"
+					fi
+					OPENJDK="openjdk-8"
+					JETTY_NAME="jetty9"
 				else
 					echo "$(redb [ERR]) - Your Debian distribution is currently not supported"
 					exit 1
@@ -246,13 +259,17 @@ installtask() {
 					DATABASE_BACKEND="mariadb-client mariadb-server"
 				else
 					DATABASE_BACKEND="mysql-client mysql-server"
+					# In Debian 9 the mysql-client package was renamed to default-mysql-client
+					if [[ ${dist_codename} == "stretch" ]]; then
+						DATABASE_BACKEND="default-mysql-client default-mysql-server"
+					fi
 				fi
 			else
 				DATABASE_BACKEND=""
 			fi
 			[[ -z ${APT} ]] && APT="apt-get --force-yes"
 DEBIAN_FRONTEND=noninteractive ${APT} -y install dnsutils sudo zip bzip2 unzip unrar-free curl rrdtool mailgraph fcgiwrap spawn-fcgi python-setuptools libmail-spf-perl libmail-dkim-perl file bsd-mailx \
-openssl php-auth-sasl php-http-request php-mail php-mail-mime php-mail-mimedecode php-net-dime php-net-smtp \
+openssl php-auth-sasl php-http-request php-mail php-mail-mime ${PHPMAILMIMEDECODE} php-net-dime php-net-smtp \
 php-net-socket php-net-url php-pear php-soap ${PHP} ${PHP}-cli ${PHP}-common ${PHP}-curl ${PHP}-gd ${PHP}-imap \
 ${PHP}-intl ${PHP}-xsl ${PHP}-mcrypt ${PHP}-mysql libawl-php ${PHP}-xmlrpc ${DATABASE_BACKEND} ${WEBSERVER_BACKEND} mailutils pyzor razor \
 postfix postfix-mysql postfix-pcre postgrey pflogsumm spamassassin spamc sa-compile libdbd-mysql-perl opendkim opendkim-tools clamav-daemon \
