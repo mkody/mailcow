@@ -16,6 +16,7 @@ $config['plugins'] = array(
 	'managesieve',
 	'attachment_reminder',
 	'new_user_dialog',
+	'carddav',
 );
 $config['skin'] = 'larry';
 $config['login_autocomplete'] = 2;

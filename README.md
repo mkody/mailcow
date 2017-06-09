@@ -60,6 +60,7 @@ Comes with...
     * ManageSieve support (w/ vacation)
     * Attachment reminder (multiple locales)
     * Zip-download marked messages
+    * CardDav address book support
 or
 * SOGo
     * Full groupware with ActiveSync and Card-/CalDAV support
